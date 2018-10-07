@@ -64,6 +64,7 @@ ENV LC_ALL en_US.UTF-8
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y openjdk-8-jdk-headless \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 
 ####
 # Install ant
