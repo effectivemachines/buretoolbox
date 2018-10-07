@@ -28,8 +28,8 @@ GITLAB_BASE_URL="https://gitlab.com"
 # API interface URL.
 GITLAB_API_URL="https://gitlab.com/api/v4"
 
-# user/repo
-GITLAB_REPO=""
+# user/repo -- this might get set by robots
+GITLAB_REPO=${GITLAB_REPO:-""}
 GITLAB_REPO_ENC=""
 
 # user settings
@@ -78,6 +78,7 @@ function gitlab_initialize
 
 ## @description given a URL, break it up into gitlab plugin globals
 ## @description this will *override* any personality or yetus defaults
+## @description WARNING: Called from the Jenkins support system!
 ## @param url
 function gitlab_breakup_url
 {
@@ -88,20 +89,25 @@ function gitlab_breakup_url
 
   count=${url//[^\/]}
   count=${#count}
-  ((pos2=count-3))
-  ((pos1=pos2))
+  if [[ ${count} -gt 4 ]]; then
+    ((pos2=count-3))
+    ((pos1=pos2))
 
-  GITLAB_BASE_URL=$(echo "${url}" | cut -f1-${pos2} -d/)
+    GITLAB_BASE_URL=$(echo "${url}" | cut -f1-${pos2} -d/)
 
-  ((pos1=pos1+1))
-  ((pos2=pos1+1))
+    ((pos1=pos1+1))
+    ((pos2=pos1+1))
 
-  GITLAB_REPO=$(echo "${url}" | cut -f${pos1}-${pos2} -d/)
+    GITLAB_REPO=$(echo "${url}" | cut -f${pos1}-${pos2} -d/)
 
-  ((pos1=pos2+2))
-  unset pos2
+    ((pos1=pos2+2))
+    unset pos2
 
-  GITLAB_ISSUE=$(echo "${url}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
+    GITLAB_ISSUE=$(echo "${url}" | cut -f${pos1}-${pos2} -d/ | cut -f1 -d.)
+  else
+    GITLAB_BASE_URL=$(echo "${url}" | cut -f1-3 -d/)
+    GITLAB_REPO=$(echo "${url}" | cut -f4- -d/)
+  fi
 }
 
 function gitlab_determine_issue
@@ -384,6 +390,7 @@ function gitlab_finalreport
     echo ":broken_heart: **-1 overall**" >> "${commentfile}"
   fi
 
+  #shellcheck disable=SC1117
   printf "\n\n\n\n" >>  "${commentfile}"
 
   i=0
@@ -393,6 +400,7 @@ function gitlab_finalreport
   done
 
   {
+    #shellcheck disable=SC1117
     printf "\n\n"
     echo "| Vote | Subsystem | Runtime | Comment |"
     echo "|:----:|----------:|--------:|:--------|"
@@ -414,6 +422,7 @@ function gitlab_finalreport
 
   if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
     {
+      #shellcheck disable=SC1117
       printf "\n\n"
       echo "| Reason | Tests |"
       echo "|-------:|:------|"
@@ -426,6 +435,7 @@ function gitlab_finalreport
   fi
 
   {
+    #shellcheck disable=SC1117
     printf "\n\n"
     echo "| Subsystem | Report/Notes |"
     echo "|----------:|:-------------|"
@@ -435,10 +445,12 @@ function gitlab_finalreport
   until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
     comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
               ${SED} -e "s,@@BASE@@,${BUILD_URL}${BUILD_URL_ARTIFACTS},g")
+    #shellcheck disable=SC1117
     printf "%s\n" "${comment}" >> "${commentfile}"
     ((i=i+1))
   done
 
+  #shellcheck disable=SC1117
   printf "\n\nThis message was automatically generated.\n\n" >> "${commentfile}"
 
   gitlab_write_comment "${commentfile}"
