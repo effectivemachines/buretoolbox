@@ -31,6 +31,13 @@ test-patch works hand-in-hand with various CI and other automated build systems.
   * activate Docker maintenance when --docker is passed
   * attempt to determine whether this is a full build (qbt-mode) or testing a patch/merge request/pull request.
 
+Circle CI
+=========
+
+TRIGGER: ${CIRCLECI}=true
+
+Artifacts (the --patch-dir directory) need to be handled directly on the command line.
+
 Gitlab CI
 =========
 

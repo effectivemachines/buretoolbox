@@ -40,8 +40,12 @@ jobs:
       - run: >
              env && ~/repo/precommit/src/main/shell/test-patch.sh
              --plugins=all
+             --patch-dir=/tmp/yetus-out
 
       - save_cache:
           paths:
             - ~/.m2
           key: v1-dependencies-{{ checksum "pom.xml" }}
+
+      - store_artifacts:
+          path: /tmp/yetus-out

@@ -20,8 +20,6 @@
 # shellcheck disable=2034
 if [[ "${CIRCLECI}" = true ]]; then
   CONSOLE_USE_BUILD_URL=true
-  PATCH_DIR=/tmp/yetus-out
-  RELOCATE_PATCH_DIR=true
   ROBOT=true
   ROBOTTYPE=circleci
 
