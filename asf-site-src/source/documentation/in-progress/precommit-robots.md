@@ -36,7 +36,7 @@ Circle CI
 
 TRIGGER: ${CIRCLECI}=true
 
-Artifacts (the --patch-dir directory) need to be handled directly on the command line.
+Circle CI support in test-patch is limited to github.com.  Artifacts (the --patch-dir directory) need to be handled directly on the command line.  Linking to the logs is not currently supported.
 
 Gitlab CI
 =========
@@ -65,6 +65,7 @@ There is some support for a few well known environment variables:
   * ${CHANGE_URL} or ${ghprbPullLink} will set the patch location as well as trigger some extra handling if 'github' or 'gitlab' appear in the string.
   * ${GIT_URL} will trigger the same extra handling if 'github' or 'gitlab' appear in the string.
   * If ${ghprbPullId} is set, then test-patch will configure itself for a Github-style PR.
+
 
 See also
   * See also the source tree's Jenkinsfile for some tips and tricks.

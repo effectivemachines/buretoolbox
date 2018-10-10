@@ -38,7 +38,7 @@ jobs:
             - v1-dependencies-
 
       - run: >
-             env && ~/repo/precommit/src/main/shell/test-patch.sh
+             ~/repo/precommit/src/main/shell/test-patch.sh
              --plugins=all
              --patch-dir=/tmp/yetus-out
 

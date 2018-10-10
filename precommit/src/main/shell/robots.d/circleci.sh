@@ -19,29 +19,42 @@
 
 # shellcheck disable=2034
 if [[ "${CIRCLECI}" = true ]]; then
-  CONSOLE_USE_BUILD_URL=true
-  ROBOT=true
-  ROBOTTYPE=circleci
+  if [[ ${CIRCLE_REPOSITORY_URL} =~ github.com ]]; then
 
-  yetus_comma_to_array CPR "${CIRCLE_PULL_REQUESTS}"
 
-  if [[ "${#CIRCLE_PULL_REQUESTS[@]}" -gt 1 ]]; then
-    BUILDMODE=full
-    USER_PARAMS+=("--empty-patch")
-  else
-    PATCH_OR_ISSUE="${CIRCLE_PULL_REQUEST}"
-    USER_PARAMS+=("${CIRCLE_PULL_REQUEST}")
+    # github artifacts show up like so:
+    #BUILD_URL_ARTIFACTS=https://circle-artifacts.com/gh/username/repo/buildnum/artifacts/0/dir/file
+    # but test-patch doesn't support URLs that aren't tied to the build_url.  so that
+    # needs to get rewritten first before this can be used
+
+    BUILD_URL="https://circleci.com/gh/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}/${CIRCLE_BUILD_NUM}"
+    BUILD_URL_CONSOLE='/'
+    CONSOLE_USE_BUILD_URL=false
+    ROBOT=true
+    ROBOTTYPE=circleci
+
+
+    yetus_comma_to_array CPR "${CIRCLE_PULL_REQUESTS}"
+
+    if [[ "${#CIRCLE_PULL_REQUESTS[@]}" -gt 1 ]]; then
+      BUILDMODE=full
+      USER_PARAMS+=("--empty-patch")
+    else
+      PATCH_OR_ISSUE="${CIRCLE_PULL_REQUEST}"
+      USER_PARAMS+=("${CIRCLE_PULL_REQUEST}")
+    fi
+
+    add_docker_env \
+      CIRCLECI \
+      CIRCLE_BUILD_NUM \
+      CIRCLE_PULL_REQUEST \
+      CIRCLE_PULL_REQUESTS \
+      CIRCLE_PROJECT_USERNAME \
+      CIRCLE_PROJECT_REPONAME \
+      CIRCLE_REPOSITORY_URL
+
+    yetus_add_entry EXEC_MODES Circle_CI
   fi
-
-  add_docker_env \
-    CIRCLECI \
-    CIRCLE_PULL_REQUEST \
-    CIRCLE_PULL_REQUESTS \
-    CIRCLE_PROJECT_USERNAME \
-    CIRCLE_PROJECT_REPONAME \
-    CIRCLE_REPOSITORY_URL
-
-  yetus_add_entry EXEC_MODES Circle_CI
 fi
 
 function circleci_set_plugin_defaults
