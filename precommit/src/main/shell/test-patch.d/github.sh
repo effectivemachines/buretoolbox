@@ -401,11 +401,11 @@ function github_locate_patch
   fi
 
   case "${input}" in
-      GH:*)
-        github_locate_pr_patch "${input}" "${output}"
-      ;;
       GHSHA:*)
         github_locate_sha_patch "${input}" "${output}"
+      ;;
+      *)
+        github_locate_pr_patch "${input}" "${output}"
       ;;
   esac
 }
