@@ -41,6 +41,7 @@ jobs:
              ~/repo/precommit/src/main/shell/test-patch.sh
              --plugins=all
              --patch-dir=/tmp/yetus-out
+             --tests-filter=checkstyle,javadoc,rubocop,ruby-lint,test4tests
 
       - save_cache:
           paths:
