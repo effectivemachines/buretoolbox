@@ -14,6 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# SHELLDOC-IGNORE
+
 add_test_type puppetlint
 
 PUPPETLINT_TIMER=0
@@ -110,7 +112,7 @@ function puppetlint_postcompile
   fi
 
   # shellcheck disable=SC2016
-  PUPPETLINT_VERSION=$(${PUPPETLINT} -v | ${AWK} '{print $NF}')
+  PUPPETLINT_VERSION=$("${PUPPETLINT}" -v | "${AWK}" '{print $NF}')
 
   add_footer_table puppetlint "v${PUPPETLINT_VERSION}"
 
