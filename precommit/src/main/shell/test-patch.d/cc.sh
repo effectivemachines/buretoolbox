@@ -61,6 +61,6 @@ function cc_logfilter
   declare input=$1
   declare output=$2
 
-  #shellcheck disable=SC2016,SC2046
-  ${GREP} -i -E "^.*\.${CC_EXT_RE}\:[[:digit:]]*\:" "${input}" > "${output}"
+  #shellcheck disable=SC1117
+  "${GREP}" -i -E "^.*\.${CC_EXT_RE}\:[[:digit:]]*\:" "${input}" > "${output}"
 }

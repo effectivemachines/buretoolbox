@@ -54,7 +54,7 @@ function junit_process_tests
   declare module_failed_tests
 
   # shellcheck disable=SC2016
-  module_test_timeouts=$(${AWK} '/^Running / { array[$NF] = 1 } /^Tests run: .* in / { delete array[$NF] } END { for (x in array) { print x } }' "${buildlogfile}")
+  module_test_timeouts=$("${AWK}" '/^Running / { array[$NF] = 1 } /^Tests run: .* in / { delete array[$NF] } END { for (x in array) { print x } }' "${buildlogfile}")
   if [[ -n "${module_test_timeouts}" ]] ; then
     JUNIT_TEST_TIMEOUTS="${JUNIT_TEST_TIMEOUTS} ${module_test_timeouts}"
     ((result=result+1))
@@ -63,7 +63,7 @@ function junit_process_tests
   #shellcheck disable=SC2026,SC2038,SC2016
   module_failed_tests=$(find "${JUNIT_TEST_OUTPUT_DIR}" -name 'TEST*.xml'\
     | xargs "${GREP}" -l -E "<failure|<error"\
-    | ${AWK} -F/ '{sub("'"TEST-${JUNIT_TEST_PREFIX}"'",""); sub(".xml",""); print $NF}')
+    | "${AWK}" -F/ '{sub("'"TEST-${JUNIT_TEST_PREFIX}"'",""); sub(".xml",""); print $NF}')
   if [[ -n "${module_failed_tests}" ]] ; then
     JUNIT_FAILED_TESTS="${JUNIT_FAILED_TESTS} ${module_failed_tests}"
     ((result=result+1))

@@ -19,6 +19,7 @@
 
 import sys
 sys.dont_write_bytecode = True
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,import-self
 import releasedocmaker
+#pylint: disable=no-member
 releasedocmaker.main()

@@ -143,7 +143,7 @@ function gitlab_determine_branch
   fi
 
   # shellcheck disable=SC2016
-  PATCH_BRANCH=$(${AWK} 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/gitlab-merge.json"\
+  PATCH_BRANCH=$("${AWK}" 'match($0,"\"ref\": \""){print $2}' "${PATCH_DIR}/gitlab-merge.json"\
      | cut -f2 -d\"\
      | tail -1  )
 
@@ -209,7 +209,7 @@ function gitlab_locate_mr_patch
   fi
 
   # Let's merge the MR JSON for later use
-  ${CURL} --silent --fail \
+  "${CURL}" --silent --fail \
           -H "${gitlabauth}" \
           --output "${PATCH_DIR}/gitlab-merge.json" \
           --location \
@@ -219,7 +219,7 @@ function gitlab_locate_mr_patch
   echo "${PATCHURL}"
 
   # the actual patch file
-  if ! ${CURL} --silent --fail \
+  if ! "${CURL}" --silent --fail \
           --output "${output}" \
           --location \
           -H "${gitlabauth}" \
@@ -330,7 +330,7 @@ function gitlab_write_comment
 
   {
     printf "{\"body\":\""
-    ${SED} -e 's,\\,\\\\,g' \
+    "${SED}" -e 's,\\,\\\\,g' \
         -e 's,\",\\\",g' \
         -e 's,$,\\r\\n,g' "${commentfile}" \
     | tr -d '\n'
@@ -344,7 +344,7 @@ function gitlab_write_comment
     return 0
   fi
 
-  ${CURL} -X POST \
+  "${CURL}" -X POST \
        -H "Content-Type: application/json" \
        -H "${gitlabauth}" \
        -d @"${restfile}" \
@@ -390,18 +390,16 @@ function gitlab_finalreport
     echo ":broken_heart: **-1 overall**" >> "${commentfile}"
   fi
 
-  #shellcheck disable=SC1117
-  printf "\n\n\n\n" >>  "${commentfile}"
+  printf '\n\n\n\n' >>  "${commentfile}"
 
   i=0
   until [[ ${i} -eq ${#TP_HEADER[@]} ]]; do
-    printf "%s\\n\\n" "${TP_HEADER[${i}]}" >> "${commentfile}"
+    printf '%s\\n\\n' "${TP_HEADER[${i}]}" >> "${commentfile}"
     ((i=i+1))
   done
 
   {
-    #shellcheck disable=SC1117
-    printf "\n\n"
+    printf '\n\n'
     echo "| Vote | Subsystem | Runtime | Comment |"
     echo "|:----:|----------:|--------:|:--------|"
   } >> "${commentfile}"
@@ -422,8 +420,7 @@ function gitlab_finalreport
 
   if [[ ${#TP_TEST_TABLE[@]} -gt 0 ]]; then
     {
-      #shellcheck disable=SC1117
-      printf "\n\n"
+      printf '\n\n'
       echo "| Reason | Tests |"
       echo "|-------:|:------|"
     } >> "${commentfile}"
@@ -435,8 +432,7 @@ function gitlab_finalreport
   fi
 
   {
-    #shellcheck disable=SC1117
-    printf "\n\n"
+    printf '\n\n'
     echo "| Subsystem | Report/Notes |"
     echo "|----------:|:-------------|"
   } >> "${commentfile}"
@@ -444,14 +440,13 @@ function gitlab_finalreport
   i=0
   until [[ $i -eq ${#TP_FOOTER_TABLE[@]} ]]; do
     comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
-              ${SED} -e "s,@@BASE@@,${BUILD_URL}${BUILD_URL_ARTIFACTS},g")
+              "${SED}" -e "s,@@BASE@@,${BUILD_URL}${BUILD_URL_ARTIFACTS},g")
     #shellcheck disable=SC1117
-    printf "%s\n" "${comment}" >> "${commentfile}"
+    printf '%s\n' "${comment}" >> "${commentfile}"
     ((i=i+1))
   done
 
-  #shellcheck disable=SC1117
-  printf "\n\nThis message was automatically generated.\n\n" >> "${commentfile}"
+  printf '\n\nThis message was automatically generated.\n\n' >> "${commentfile}"
 
   gitlab_write_comment "${commentfile}"
 }

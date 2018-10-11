@@ -25,7 +25,6 @@ fi
 MAVEN_CUSTOM_REPOS=false
 MAVEN_CUSTOM_REPOS_DIR="@@@WORKSPACE@@@/yetus-m2"
 MAVEN_DEPENDENCY_ORDER=true
-MAVEN_LIMIT_TESTS=false
 
 add_test_type mvnsite
 add_build_tool maven
@@ -210,8 +209,7 @@ function maven_precheck
 
     if [[ ! -d "${MAVEN_LOCAL_REPO}" ]]; then
       yetus_debug "Creating ${MAVEN_LOCAL_REPO}"
-      mkdir -p "${MAVEN_LOCAL_REPO}"
-      if [[ $? -ne 0 ]]; then
+      if ! mkdir -p "${MAVEN_LOCAL_REPO}"; then
         yetus_error "ERROR: Unable to create ${MAVEN_LOCAL_REPO}"
         return 1
       fi
@@ -359,17 +357,14 @@ function maven_javac_calcdiffs
   declare orig=$1
   declare new=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # first, strip :[line
   # this keeps file,column in an attempt to increase
   # accuracy in case of multiple, repeated errors
   # since the column number shouldn't change
   # if the line of code hasn't been touched
-  # shellcheck disable=SC2016
-  ${SED} -e 's#:\[[0-9]*,#:#' "${orig}" > "${tmp}.branch"
-  # shellcheck disable=SC2016
-  ${SED} -e 's#:\[[0-9]*,#:#' "${new}" > "${tmp}.patch"
+  "${SED}" -e 's#:\[[0-9]*,#:#' "${orig}" > "${tmp}.branch"
+  "${SED}" -e 's#:\[[0-9]*,#:#' "${new}" > "${tmp}.patch"
 
   # compare the errors, generating a string of line
   # numbers. Sorry portability: GNU diff makes this too easy
@@ -380,11 +375,9 @@ function maven_javac_calcdiffs
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${new}" | tail -1
+  done < <(cat "${tmp}.lined")
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -401,15 +394,12 @@ function maven_javadoc_calcdiffs
   declare orig=$1
   declare new=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # can't use the generic handler for this because of the
   # [WARNING], etc headers.
   # strip :linenum from the output, keeping the filename
-  # shellcheck disable=SC2016
-  ${SED} -e 's#:[0-9]*:#:#' "${orig}" > "${tmp}.branch"
-  # shellcheck disable=SC2016
-  ${SED} -e 's#:[0-9]*:#:#' "${new}" > "${tmp}.patch"
+  "${SED}" -e 's#:[0-9]*:#:#' "${orig}" > "${tmp}.branch"
+  "${SED}" -e 's#:[0-9]*:#:#' "${new}" > "${tmp}.patch"
 
   # compare the errors, generating a string of line
   # numbers. Sorry portability: GNU diff makes this too easy
@@ -420,11 +410,9 @@ function maven_javadoc_calcdiffs
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${new}" | tail -1
+  done < <(cat "${tmp}.lined")
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -433,7 +421,6 @@ function maven_builtin_personality_modules
 {
   declare repostatus=$1
   declare testtype=$2
-
   declare module
 
   yetus_debug "Using builtin personality_modules"
@@ -680,7 +667,7 @@ function maven_reorder_module_process
   done
 
   fn=$(module_file_fragment "${CHANGED_UNION_MODULES}")
-  pushd "${BASEDIR}/${CHANGED_UNION_MODULES}" >/dev/null
+  pushd "${BASEDIR}/${CHANGED_UNION_MODULES}" >/dev/null || return 1
 
   # get the module directory list in the correct order based on maven dependencies
   # shellcheck disable=SC2046
@@ -698,7 +685,7 @@ function maven_reorder_module_process
       fi
     done
   done < "${PATCH_DIR}/maven-${repostatus}-dirlist-${fn}.txt"
-  popd >/dev/null
+  popd >/dev/null || return 1
 
   if [[ "${needroot}" = true ]]; then
     newlist=("${newlist[@]}" ".")
@@ -787,5 +774,6 @@ function maven_reorder_modules
     fi
   fi
 
+  # shellcheck disable=SC2046
   echo "Elapsed: $(clock_display $(stop_clock))"
 }

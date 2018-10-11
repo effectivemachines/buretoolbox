@@ -110,7 +110,7 @@ function puppetlint_postcompile
   fi
 
   # shellcheck disable=SC2016
-  PUPPETLINT_VERSION=$(${PUPPETLINT} -v | ${AWK} '{print $NF}')
+  PUPPETLINT_VERSION=$("${PUPPETLINT}" -v | "${AWK}" '{print $NF}')
 
   add_footer_table puppetlint "v${PUPPETLINT_VERSION}"
 

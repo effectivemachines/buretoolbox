@@ -18,8 +18,8 @@
 
 import sys
 sys.dont_write_bytecode = True
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,import-self
 import shelldocs
 # pylint: enable=wrong-import-position
-
+# pylint: disable=no-member
 shelldocs.main()

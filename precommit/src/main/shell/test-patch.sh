@@ -70,6 +70,7 @@ function setup_defaults
 
   set_yetus_version
 
+  #shellcheck disable=SC2153
   if [[ ${VERSION} =~ SNAPSHOT$ ]]; then
     version="in-progress"
   fi
@@ -114,6 +115,7 @@ function module_file_fragment
   if [[ ${mod} = \. ]]; then
     echo root
   else
+    #shellcheck disable=SC1003
     echo "$1" | tr '/' '_' | tr '\\' '_'
   fi
 }
@@ -280,7 +282,7 @@ function add_vote_table
 function report_jvm_version
 {
   #shellcheck disable=SC2016
-  "${1}/bin/java" -version 2>&1 | head -1 | ${AWK} '{print $NF}' | tr -d \"
+  "${1}/bin/java" -version 2>&1 | head -1 | "${AWK}" '{print $NF}' | tr -d \"
 }
 
 ## @description  Verify if a given test is multijdk
@@ -411,13 +413,13 @@ function big_console_header
 {
   local text="$*"
   local spacing=$(( (75+${#text}) /2 ))
-  printf "\n\n"
+  printf '\n\n'
   echo "============================================================================"
   echo "============================================================================"
-  printf "%*s\n"  ${spacing} "${text}"
+  printf '%*s\n'  ${spacing} "${text}"
   echo "============================================================================"
   echo "============================================================================"
-  printf "\n\n"
+  printf '\n\n'
 }
 
 ## @description  Find the largest size of a column of an array
@@ -457,7 +459,7 @@ function write_comment
   declare bug
 
   for bug in ${BUGCOMMENTS}; do
-    if declare -f ${bug}_write_comment >/dev/null; then
+    if declare -f "${bug}_write_comment" >/dev/null; then
        "${bug}_write_comment" "${commentfile}"
     fi
   done
@@ -512,8 +514,8 @@ function compute_gitdiff
   local content
   local outfile="${PATCH_DIR}/computegitdiff.${RANDOM}"
 
-  pushd "${BASEDIR}" >/dev/null
-  ${GIT} add --all --intent-to-add
+  pushd "${BASEDIR}" >/dev/null || return 1
+  "${GIT}" add --all --intent-to-add
   while read -r line; do
     if [[ ${line} =~ ^\+\+\+ ]]; then
       file="./"$(echo "${line}" | cut -f2- -d/)
@@ -546,7 +548,7 @@ function compute_gitdiff
       while read -r content; do
           ((actual=counter+startline))
           echo "${file}:${actual}:" >> "${GITDIFFLINES}"
-          printf "%s:%s:%s\n" "${file}" "${actual}" "${content}" >> "${GITDIFFCONTENT}"
+          printf '%s:%s:%s\n' "${file}" "${actual}" "${content}" >> "${GITDIFFCONTENT}"
           ((counter=counter+1))
       done < "${outfile}"
       rm "${outfile}"
@@ -568,7 +570,7 @@ function compute_gitdiff
     touch "${GITUNIDIFFLINES}"
   fi
 
-  popd >/dev/null
+  popd >/dev/null || return 1
 }
 
 ## @description generate an index of unified diff lines vs. modified/added lines
@@ -597,11 +599,11 @@ function compute_unidiff
     filen=${fn##./}
 
     if [[ -f "${filen}" ]]; then
-      ${GIT} diff "${filen}" \
+      "${GIT}" diff "${filen}" \
         | tail -n +6 \
-        | ${GREP} -n '^+' \
-        | ${GREP} -vE '^[0-9]*:\+\+\+' \
-        | ${SED} -e 's,^\([0-9]*:\)\+,\1,g' \
+        | "${GREP}" -n '^+' \
+        | "${GREP}" -vE '^[0-9]*:\+\+\+' \
+        | "${SED}" -e 's,^\([0-9]*:\)\+,\1,g' \
           -e "s,^,./${filen}:,g" \
               >>  "${tmpfile}"
     fi
@@ -614,7 +616,7 @@ function compute_unidiff
   # ./filename:real number:diff number
   # shellcheck disable=SC2016
   paste -d: "${GITDIFFLINES}" "${tmpfile}" \
-    | ${AWK} -F: '{print $1":"$2":"$5":"$6}' \
+    | "${AWK}" -F: '{print $1":"$2":"$5":"$6}' \
     >> "${GITUNIDIFFLINES}"
 
   rm "${tmpfile}"
@@ -803,7 +805,7 @@ function yetus_usage
   yetus_reset_usage
 
   for plugin in ${BUILDTOOLS} ${TESTTYPES} ${BUGSYSTEMS} ${TESTFORMATS}; do
-    if declare -f ${plugin}_usage >/dev/null 2>&1; then
+    if declare -f "${plugin}_usage" >/dev/null 2>&1; then
       echo ""
       echo "'${plugin}' plugin usage options:"
       "${plugin}_usage"
@@ -1041,8 +1043,7 @@ function parse_args
   # we need absolute dir for PATCH_DIR
   cd "${STARTINGDIR}" || cleanup_and_exit 1
   if [[ ! -d ${PATCH_DIR} ]]; then
-    mkdir -p "${PATCH_DIR}"
-    if [[ $? == 0 ]] ; then
+    if mkdir -p "${PATCH_DIR}"; then
       echo "${PATCH_DIR} has been created"
     else
       echo "Unable to create ${PATCH_DIR}"
@@ -1122,15 +1123,11 @@ function find_buildfile_dir
 function find_changed_files
 {
   declare line
-  declare oldifs
 
   case "${BUILDMODE}" in
     full)
       echo "Building a list of all files in the source tree"
-      oldifs=${IFS}
-      IFS=$'\n'
-      CHANGED_FILES=($(git ls-files))
-      IFS=${oldifs}
+      while IFS= read -r; do CHANGED_FILES+=("$REPLY"); done < <(git ls-files)
     ;;
     patch)
       # get a list of all of the files that have been changed,
@@ -1201,10 +1198,18 @@ function find_changed_modules
   declare dirt
   declare buildfile
   declare -a tmpmods
+  declare retval
 
-  buildfile=$("${BUILDTOOL}_buildfile")
+  if declare -f "${BUILDTOOL}_buildfile" >/dev/null; then
+    buildfile=$("${BUILDTOOL}_buildfile")
+    retval=$?
+  else
+    yetus_error "ERROR: build tool plugin is broken"
+    bugsystem_finalreport 1
+    cleanup_and_exit 1
+  fi
 
-  if [[ $? != 0 ]]; then
+  if [[ ${retval} != 0 ]]; then
     yetus_error "ERROR: Unsupported build tool."
     bugsystem_finalreport 1
     cleanup_and_exit 1
@@ -1225,8 +1230,7 @@ function find_changed_modules
 
       dirt=$(dirname "${i}")
 
-      module_skipdir "${dirt}"
-      if [[ $? != 0 ]]; then
+      if ! module_skipdir "${dirt}"; then
         continue
       fi
 
@@ -1242,7 +1246,7 @@ function find_changed_modules
 
   tmpmods=("${tmpmods[@]}" "${USER_MODULE_LIST[@]}")
 
-  CHANGED_MODULES=($(printf "%s\n" "${tmpmods[@]}" | sort -u))
+  yetus_sort_and_unique_array CHANGED_MODULES
 
   yetus_debug "Locate the union of ${CHANGED_MODULES[*]}"
   count=${#CHANGED_MODULES[@]}
@@ -1252,13 +1256,15 @@ function find_changed_modules
     CHANGED_UNION_MODULES="${CHANGED_MODULES[0]}"
   else
     i=1
-    while [[ ${i} -lt 100 ]]
-    do
+
+    # BUG - fix me
+    # shellcheck disable=SC2207
+    while [[ ${i} -lt 100 ]]; do
       tmpmods=()
       for j in "${CHANGED_MODULES[@]}"; do
-        tmpmods=("${tmpmods[@]}" $(echo "${j}" | cut -f1-${i} -d/))
+        tmpmods+=($(echo "${j}" | cut -f1-${i} -d/))
       done
-      tmpmods=($(printf "%s\n" "${tmpmods[@]}" | sort -u))
+      tmpmods=($(printf '%s\n' "${tmpmods[@]}" | sort -u))
 
       module=${tmpmods[0]}
       count=${#tmpmods[@]}
@@ -1285,7 +1291,7 @@ function find_changed_modules
 
   # some build tools may want to change these and/or
   # make other changes based upon these results
-  if declare -f ${BUILDTOOL}_reorder_modules >/dev/null; then
+  if declare -f "${BUILDTOOL}_reorder_modules" >/dev/null; then
     "${BUILDTOOL}_reorder_modules" "${repostatus}"
   fi
 }
@@ -1354,7 +1360,7 @@ function git_checkout
     # git wiping it out.
     exemptdir=$(relative_dir "${PATCH_DIR}")
     if [[ $? == 1 ]]; then
-      ${GIT} clean -xdf
+      "${GIT}" clean -xdf
       status=$?
 
     else
@@ -1363,7 +1369,7 @@ function git_checkout
       # re-exec mode (which places a directory full of stuff in it)
       yetus_debug "Exempting ${exemptdir} from clean"
       rm "${PATCH_DIR}/*" 2>/dev/null
-      ${GIT} clean -xdf -e "${exemptdir}"
+      "${GIT}" clean -xdf -e "${exemptdir}"
       status=$?
     fi
 
@@ -1372,7 +1378,7 @@ function git_checkout
       cleanup_and_exit 1
     fi
 
-    if ! ${GIT} checkout --force "${PATCH_BRANCH_DEFAULT}"; then
+    if ! "${GIT}" checkout --force "${PATCH_BRANCH_DEFAULT}"; then
       yetus_error "ERROR: git checkout --force ${PATCH_BRANCH_DEFAULT} is failing"
       cleanup_and_exit 1
     fi
@@ -1383,7 +1389,7 @@ function git_checkout
     # git ref hasn't been brought in tree yet
     if [[ ${OFFLINE} == false ]] && [[ ${GIT_OFFLINE} == false ]]; then
 
-      if ! ${GIT} pull --rebase; then
+      if ! "${GIT}" pull --rebase; then
         if [[ ${pullmayfail} == true ]]; then
           yetus_error "WARNING: Noted that pull failed, will treat git as offline from here on out"
           GIT_OFFLINE=true
@@ -1396,7 +1402,7 @@ function git_checkout
 
     # forcibly checkout this branch or git ref
 
-    if ! ${GIT} checkout --force "${PATCH_BRANCH}"; then
+    if ! "${GIT}" checkout --force "${PATCH_BRANCH}"; then
       yetus_error "ERROR: git checkout ${PATCH_BRANCH} is failing"
       cleanup_and_exit 1
     fi
@@ -1409,18 +1415,18 @@ function git_checkout
       # protected by OFFLINE == false
 
       if [[ "${GIT_OFFLINE}" == false ]]; then
-        if ! ${GIT} fetch; then
+        if ! "${GIT}" fetch; then
           yetus_error "ERROR: git fetch is failing"
           cleanup_and_exit 1
         fi
 
-        if ! ${GIT} reset --hard FETCH_HEAD; then
+        if ! "${GIT}" reset --hard FETCH_HEAD; then
           yetus_error "ERROR: git reset is failing"
           cleanup_and_exit 1
         fi
       fi
 
-      if ! ${GIT} clean -df; then
+      if ! "${GIT}" clean -df; then
         yetus_error "ERROR: git clean is failing"
         cleanup_and_exit 1
       fi
@@ -1428,7 +1434,7 @@ function git_checkout
 
   else
 
-    status=$(${GIT} status --porcelain)
+    status=$("${GIT}" status --porcelain)
     if [[ "${status}" != "" && -z ${DIRTY_WORKSPACE} ]] ; then
       yetus_error "ERROR: --dirty-workspace option not provided."
       yetus_error "ERROR: can't run in a workspace that contains the following modifications"
@@ -1438,7 +1444,7 @@ function git_checkout
 
     determine_branch
 
-    currentbranch=$(${GIT} rev-parse --abbrev-ref HEAD)
+    currentbranch=$("${GIT}" rev-parse --abbrev-ref HEAD)
     if [[ "${currentbranch}" != "${PATCH_BRANCH}" ]];then
       if [[ "${BUILDMODE}" = patch ]]; then
         echo "WARNING: Current git branch is ${currentbranch} but patch is built for ${PATCH_BRANCH}."
@@ -1474,8 +1480,7 @@ function verify_valid_branch
   if [[ ${check} =~ ^git ]]; then
     hash=$(echo "${check}" | cut -f2- -dt)
     if [[ -n ${hash} ]]; then
-      ${GIT} cat-file -t "${hash}" >/dev/null 2>&1
-      if [[ $? -eq 0 ]]; then
+      if "${GIT}" cat-file -t "${hash}" >/dev/null 2>&1; then
         PATCH_BRANCH=${hash}
         return 0
       fi
@@ -1485,7 +1490,7 @@ function verify_valid_branch
     fi
   fi
 
-  ${GIT} show-ref "${check}" >/dev/null 2>&1
+  "${GIT}" show-ref "${check}" >/dev/null 2>&1
   return $?
 }
 
@@ -1505,7 +1510,7 @@ function determine_branch
     return
   fi
 
-  pushd "${BASEDIR}" > /dev/null
+  pushd "${BASEDIR}" > /dev/null || return 1
 
   yetus_debug "Determine branch"
 
@@ -1522,7 +1527,7 @@ function determine_branch
   fi
 
   for bugs in ${BUGSYSTEMS}; do
-    if declare -f ${bugs}_determine_branch >/dev/null;then
+    if declare -f "${bugs}_determine_branch" >/dev/null;then
       "${bugs}_determine_branch"
       retval=$?
       if [[ ${retval} == 0 ]]; then
@@ -1534,7 +1539,7 @@ function determine_branch
   if [[ ${retval} != 0 ]]; then
     PATCH_BRANCH="${PATCH_BRANCH_DEFAULT}"
   fi
-  popd >/dev/null
+  popd >/dev/null || return 1
 }
 
 ## @description  Try to guess the issue being tested using a variety of heuristics
@@ -1550,9 +1555,8 @@ function determine_issue
   yetus_debug "Determine issue"
 
   for bugsys in ${BUGSYSTEMS}; do
-    if declare -f ${bugsys}_determine_issue >/dev/null; then
-      "${bugsys}_determine_issue" "${PATCH_OR_ISSUE}"
-      if [[ $? == 0 ]]; then
+    if declare -f "${bugsys}_determine_issue" >/dev/null; then
+      if "${bugsys}_determine_issue" "${PATCH_OR_ISSUE}"; then
         yetus_debug "${bugsys} says ${ISSUE}"
         return 0
       fi
@@ -1579,7 +1583,7 @@ function determine_needed_tests
     personality_file_tests "${i}"
 
     for plugin in ${TESTTYPES} ${BUILDTOOL}; do
-      if declare -f ${plugin}_filefilter >/dev/null 2>&1; then
+      if declare -f "${plugin}_filefilter" >/dev/null 2>&1; then
         "${plugin}_filefilter" "${i}"
       fi
     done
@@ -1598,8 +1602,7 @@ function apply_patch_file
 {
   big_console_header "Applying patch to ${PATCH_BRANCH}"
 
-  patchfile_apply_driver "${PATCH_DIR}/patch"
-  if [[ $? != 0 ]] ; then
+  if ! patchfile_apply_driver "${PATCH_DIR}/patch"; then
     echo "PATCH APPLICATION FAILED"
     ((RESULT = RESULT + 1))
     add_vote_table -1 patch "${PATCH_OR_ISSUE} does not apply to ${PATCH_BRANCH}. Rebase required? Wrong Branch? See ${PATCH_NAMING_RULE} for help."
@@ -1633,7 +1636,7 @@ function copytpbits
     return
   fi
 
-  pushd "${STARTINGDIR}" >/dev/null
+  pushd "${STARTINGDIR}" >/dev/null || return 1
   mkdir -p "${PATCH_DIR}/precommit/user-plugins"
   mkdir -p "${PATCH_DIR}/precommit/personality"
   mkdir -p "${PATCH_DIR}/precommit/test-patch-docker"
@@ -1671,9 +1674,9 @@ function copytpbits
     yetus_debug "copying '${DOCKERFILE}' over to '${PATCH_DIR}/precommit/test-patch-docker/Dockerfile'"
     dockerdir=$(dirname "${DOCKERFILE}")
     dockfile=$(basename "${DOCKERFILE}")
-    pushd "${dockerdir}" >/dev/null
+    pushd "${dockerdir}" >/dev/null || return 1
     gitfilerev=$("${GIT}" log -n 1 --pretty=format:%h -- "${dockfile}" 2>/dev/null)
-    popd >/dev/null
+    popd >/dev/null || return 1
     if [[ -z ${gitfilerev} ]]; then
       gitfilerev=$(date "+%F")
       gitfilerev="date${gitfilerev}"
@@ -1689,16 +1692,16 @@ function copytpbits
       fi
       # make sure we put some space between, just in case last
       # line isn't an empty line or whatever
-      printf "\n\n"
+      printf '\n\n'
       echo "### YETUS_PRIVATE: start test-patch-bootstrap"
       cat "${BINDIR}/test-patch-docker/Dockerfile-endstub"
 
-      printf "\n\n"
+      printf '\n\n'
     ) > "${PATCH_DIR}/precommit/test-patch-docker/Dockerfile"
     DOCKERFILE="${PATCH_DIR}/precommit/test-patch-docker/Dockerfile"
   fi
 
-  popd >/dev/null
+  popd >/dev/null || return 1
 }
 
 ## @description  change the working directory to execute the buildtool
@@ -1718,19 +1721,19 @@ function buildtool_cwd
     if [[ ! -e "${BUILDTOOLCWD}" ]]; then
       mkdir -p "${BUILDTOOLCWD}"
     fi
-    pushd "${BUILDTOOLCWD}" >/dev/null
-    return $?
+    pushd "${BUILDTOOLCWD}" >/dev/null || return 1
+    return 0
   fi
 
   case "${BUILDTOOLCWD}" in
     basedir)
-      pushd "${BASEDIR}" >/dev/null
+      pushd "${BASEDIR}" >/dev/null || return 1
     ;;
     module)
-      pushd "${BASEDIR}/${MODULE[${modindex}]}" >/dev/null
+      pushd "${BASEDIR}/${MODULE[${modindex}]}" >/dev/null || return 1
     ;;
     *)
-      pushd "$(pwd)"
+      pushd "$(pwd)" || return 1
     ;;
   esac
 }
@@ -1763,6 +1766,7 @@ function check_reexec
       "${USER_PLUGIN_DIR}" \
       "${DOCKERFILE}"; do
     tpdir=$(relative_dir "${testdir}")
+    # shellcheck disable=SC2181
     if [[ $? == 0
         && "${CHANGED_FILES[*]}" =~ ${tpdir} ]]; then
       copy=true
@@ -2121,13 +2125,11 @@ function modules_workers
     fn=$(module_file_fragment "${MODULE[${modindex}]}")
     fn="${fn}${jdk}"
     modulesuffix=$(basename "${MODULE[${modindex}]}")
-    buildtool_cwd "${modindex}"
-
     if [[ ${modulesuffix} = \. ]]; then
       modulesuffix="root"
     fi
 
-    if [[ $? != 0 ]]; then
+    if ! buildtool_cwd "${modindex}"; then
       echo "${BASEDIR}/${MODULE[${modindex}]} no longer exists. Skipping."
       ((modindex=modindex+1))
       continue
@@ -2171,7 +2173,7 @@ function modules_workers
     MODULE_STATUS_TIMER[${modindex}]=${savestop}
     # shellcheck disable=SC2086
     echo "Elapsed: $(clock_display ${savestop})"
-    popd >/dev/null
+    popd >/dev/null || return 1
     ((modindex=modindex+1))
   done
 
@@ -2320,7 +2322,7 @@ function check_unittests
 
       needlog=0
       for testsys in ${TESTFORMATS}; do
-        if declare -f ${testsys}_process_tests >/dev/null; then
+        if declare -f "${testsys}_process_tests" >/dev/null; then
           yetus_debug "Calling ${testsys}_process_tests"
           "${testsys}_process_tests" "${module}" "${test_logfile}" "${fn}"
           formatresult=$?
@@ -2335,13 +2337,13 @@ function check_unittests
         module_status ${i} -1 "patch-unit-${fn}.txt"
       fi
 
-      popd >/dev/null
+      popd >/dev/null || return 1
 
       ((i=i+1))
     done
 
     for testsys in ${TESTFORMATS}; do
-      if declare -f ${testsys}_finalize_results >/dev/null; then
+      if declare -f "${testsys}_finalize_results" >/dev/null; then
         yetus_debug "Calling ${testsys}_finalize_results"
         "${testsys}_finalize_results" "${statusjdk}"
       fi
@@ -2393,7 +2395,7 @@ function bugsystem_linecomments
     uniline=$(${GREP} "${idxline}" "${GITUNIDIFFLINES}" | cut -f3 -d: )
 
     for bugs in ${BUGLINECOMMENTS}; do
-      if declare -f ${bugs}_linecomments >/dev/null;then
+      if declare -f "${bugs}_linecomments" >/dev/null;then
         "${bugs}_linecomments" "${title}" "${file}" "${realline}" "${uniline}" "${text}"
       fi
     done
@@ -2417,7 +2419,7 @@ function bugsystem_finalreport
   add_footer_table "Powered by" "Apache Yetus ${VERSION} http://yetus.apache.org"
 
   for bugs in ${BUGCOMMENTS}; do
-    if declare -f ${bugs}_finalreport >/dev/null;then
+    if declare -f "${bugs}_finalreport" >/dev/null;then
       "${bugs}_finalreport" "${@}"
     fi
   done
@@ -2472,11 +2474,10 @@ function runtests
 
   for plugin in ${TESTTYPES}; do
     verify_patchdir_still_exists
-    if declare -f ${plugin}_tests >/dev/null 2>&1; then
+    if declare -f "${plugin}_tests" >/dev/null 2>&1; then
       modules_reset
       yetus_debug "Running ${plugin}_tests"
-      #shellcheck disable=SC2086
-      ${plugin}_tests
+      "${plugin}_tests"
     fi
   done
   archive
@@ -2496,32 +2497,28 @@ function column_calcdiffs
   declare branch=$1
   declare patch=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # first, strip filenames:line:
   # this keeps column: in an attempt to increase
   # accuracy in case of multiple, repeated errors
   # since the column number shouldn't change
   # if the line of code hasn't been touched
-  # shellcheck disable=SC2016
   cut -f3- -d: "${branch}" > "${tmp}.branch"
-  # shellcheck disable=SC2016
   cut -f3- -d: "${patch}" > "${tmp}.patch"
 
   # compare the errors, generating a string of line
   # numbers. Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
+  "${DIFF}" --unchanged-line-format="" \
      --old-line-format="" \
      --new-line-format="%dn " \
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${patch}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${patch}" | tail -1
+  done < <(cat "${tmp}.lined")
+
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -2540,29 +2537,26 @@ function error_calcdiffs
   declare branch=$1
   declare patch=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # first, pull out just the errors
   # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${branch}" > "${tmp}.branch"
+  "${AWK}" -F: '{print $NF}' "${branch}" > "${tmp}.branch"
 
   # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${patch}" > "${tmp}.patch"
+  "${AWK}" -F: '{print $NF}' "${patch}" > "${tmp}.patch"
 
   # compare the errors, generating a string of line
   # numbers. Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
+  "${DIFF}" --unchanged-line-format="" \
      --old-line-format="" \
      --new-line-format="%dn " \
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${patch}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${patch}" | tail -1
+  done < <(cat "${tmp}.lined")
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -2590,11 +2584,11 @@ function calcdiffs
     touch "${patchlog}"
   fi
 
-  if declare -f ${PROJECT_NAME}_${testtype}_calcdiffs >/dev/null; then
+  if declare -f "${PROJECT_NAME}_${testtype}_calcdiffs" >/dev/null; then
     "${PROJECT_NAME}_${testtype}_calcdiffs" "${branchlog}" "${patchlog}"
-  elif declare -f ${BUILDTOOL}_${testtype}_calcdiffs >/dev/null; then
+  elif declare -f "${BUILDTOOL}_${testtype}_calcdiffs" >/dev/null; then
     "${BUILDTOOL}_${testtype}_calcdiffs" "${branchlog}" "${patchlog}"
-  elif declare -f ${testtype}_calcdiffs >/dev/null; then
+  elif declare -f "${testtype}_calcdiffs" >/dev/null; then
     "${testtype}_calcdiffs" "${branchlog}" "${patchlog}"
   else
     error_calcdiffs "${branchlog}" "${patchlog}"
@@ -2645,11 +2639,11 @@ function generic_logfilter
   declare input=$2
   declare output=$3
 
-  if declare -f ${PROJECT_NAME}_${testtype}_logfilter >/dev/null; then
+  if declare -f "${PROJECT_NAME}_${testtype}_logfilter" >/dev/null; then
     "${PROJECT_NAME}_${testtype}_logfilter" "${input}" "${output}"
-  elif declare -f ${BUILDTOOL}_${testtype}_logfilter >/dev/null; then
+  elif declare -f "${BUILDTOOL}_${testtype}_logfilter" >/dev/null; then
     "${BUILDTOOL}_${testtype}_logfilter" "${input}" "${output}"
-  elif declare -f ${testtype}_logfilter >/dev/null; then
+  elif declare -f "${testtype}_logfilter" >/dev/null; then
     "${testtype}_logfilter" "${input}" "${output}"
   else
     yetus_error "ERROR: ${testtype}: No function defined to filter problems."
@@ -2772,9 +2766,9 @@ function generic_postlog_compare
     generic_logfilter "${testtype}" "${PATCH_DIR}/patch-${origlog}-${fn}.txt" "${PATCH_DIR}/patch-${origlog}-${testtype}-${fn}.txt"
 
     # shellcheck disable=SC2016
-    numbranch=$(wc -l "${PATCH_DIR}/branch-${origlog}-${testtype}-${fn}.txt" | ${AWK} '{print $1}')
+    numbranch=$(wc -l "${PATCH_DIR}/branch-${origlog}-${testtype}-${fn}.txt" | "${AWK}" '{print $1}')
     # shellcheck disable=SC2016
-    numpatch=$(wc -l "${PATCH_DIR}/patch-${origlog}-${testtype}-${fn}.txt" | ${AWK} '{print $1}')
+    numpatch=$(wc -l "${PATCH_DIR}/patch-${origlog}-${testtype}-${fn}.txt" | "${AWK}" '{print $1}')
 
     calcdiffs \
       "${PATCH_DIR}/branch-${origlog}-${testtype}-${fn}.txt" \
@@ -2783,7 +2777,7 @@ function generic_postlog_compare
       > "${PATCH_DIR}/diff-${origlog}-${testtype}-${fn}.txt"
 
     # shellcheck disable=SC2016
-    addpatch=$(wc -l "${PATCH_DIR}/diff-${origlog}-${testtype}-${fn}.txt" | ${AWK} '{print $1}')
+    addpatch=$(wc -l "${PATCH_DIR}/diff-${origlog}-${testtype}-${fn}.txt" | "${AWK}" '{print $1}')
 
     ((fixedpatch=numbranch-numpatch+addpatch))
 
@@ -2931,7 +2925,7 @@ function compile_nonjvm
   for plugin in ${TESTTYPES}; do
     modules_restore
     verify_patchdir_still_exists
-    if declare -f ${plugin}_compile >/dev/null 2>&1; then
+    if declare -f "${plugin}_compile" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_compile ${codebase} ${multijdkmode}"
       "${plugin}_compile" "${codebase}" "${multijdkmode}"
       ((result = result + $?))
@@ -2992,11 +2986,9 @@ function compile_cycle
   find_changed_modules "${codebase}"
 
   for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${TESTTYPES} ${TESTFORMATS}; do
-    if declare -f ${plugin}_precompile >/dev/null 2>&1; then
+    if declare -f "${plugin}_precompile" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_precompile"
-      #shellcheck disable=SC2086
-      ${plugin}_precompile ${codebase}
-      if [[ $? -gt 0 ]]; then
+      if ! "${plugin}_precompile" "${codebase}"; then
         ((result = result+1))
       fi
       archive
@@ -3006,11 +2998,9 @@ function compile_cycle
   compile "${codebase}"
 
   for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${TESTTYPES} ${TESTFORMATS}; do
-    if declare -f ${plugin}_postcompile >/dev/null 2>&1; then
+    if declare -f "${plugin}_postcompile" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_postcompile"
-      #shellcheck disable=SC2086
-      ${plugin}_postcompile ${codebase}
-      if [[ $? -gt 0 ]]; then
+      if ! "${plugin}_postcompile" "${codebase}"; then
         ((result = result+1))
       fi
       archive
@@ -3018,11 +3008,9 @@ function compile_cycle
   done
 
   for plugin in ${PROJECT_NAME} ${BUILDTOOL} ${TESTTYPES} ${TESTFORMATS}; do
-    if declare -f ${plugin}_rebuild >/dev/null 2>&1; then
+    if declare -f "${plugin}_rebuild" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_rebuild"
-      #shellcheck disable=SC2086
-      ${plugin}_rebuild ${codebase}
-      if [[ $? -gt 0 ]]; then
+      if ! "${plugin}_rebuild" "${codebase}"; then
         ((result = result+1))
       fi
       archive
@@ -3049,11 +3037,9 @@ function patchfiletests
   declare result=0
 
   for plugin in ${BUILDTOOL} ${TESTTYPES} ${TESTFORMATS}; do
-    if declare -f ${plugin}_patchfile >/dev/null 2>&1; then
+    if declare -f "${plugin}_patchfile" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_patchfile"
-      #shellcheck disable=SC2086
-      ${plugin}_patchfile "${PATCH_DIR}/patch"
-      if [[ $? -gt 0 ]]; then
+      if ! "${plugin}_patchfile" "${PATCH_DIR}/patch"; then
         ((result = result+1))
       fi
       archive
@@ -3081,11 +3067,9 @@ function distclean
   big_console_header "Cleaning the source tree"
 
   for plugin in ${TESTTYPES} ${TESTFORMATS}; do
-    if declare -f ${plugin}_clean >/dev/null 2>&1; then
+    if declare -f "${plugin}_clean" >/dev/null 2>&1; then
       yetus_debug "Running ${plugin}_distclean"
-      #shellcheck disable=SC2086
-      ${plugin}_clean
-      if [[ $? -gt 0 ]]; then
+      if ! "${plugin}_clean"; then
         ((result = result+1))
       fi
     fi
@@ -3235,8 +3219,7 @@ function initialize
       echo "Testing ${ISSUE} patch on ${PATCH_BRANCH}."
     fi
 
-    patchfile_dryrun_driver "${PATCH_DIR}/patch"
-    if [[ $? != 0 ]]; then
+    if ! patchfile_dryrun_driver "${PATCH_DIR}/patch"; then
       ((RESULT = RESULT + 1))
       yetus_error "ERROR: ${PATCH_OR_ISSUE} does not apply to ${PATCH_BRANCH}."
       add_vote_table -1 patch "${PATCH_OR_ISSUE} does not apply to ${PATCH_BRANCH}. Rebase required? Wrong Branch? See ${PATCH_NAMING_RULE} for help."
@@ -3278,11 +3261,10 @@ function prechecks
   for plugin in ${BUILDTOOL} ${NEEDED_TESTS} ${TESTFORMATS}; do
     verify_patchdir_still_exists
 
-    if declare -f ${plugin}_precheck >/dev/null 2>&1; then
+    if declare -f "${plugin}_precheck" >/dev/null 2>&1; then
 
       yetus_debug "Running ${plugin}_precheck"
-      #shellcheck disable=SC2086
-      ${plugin}_precheck
+      "${plugin}_precheck"
 
       (( result = result + $? ))
       if [[ ${result} != 0 ]] ; then
@@ -3377,4 +3359,3 @@ finish_footer_table
 
 bugsystem_finalreport ${RESULT}
 cleanup_and_exit ${RESULT}
-

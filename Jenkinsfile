@@ -89,6 +89,8 @@ pipeline {
             # plugins to enable
             YETUS_ARGS+=("--plugins=all")
 
+            YETUS_ARGS+=("--tests-filter=checkstyle,javadoc,rubocop,rubylint,tests4tests")
+
             # run test-patch from the source tree specified up above
             TESTPATCHBIN=${WORKSPACE}/src/precommit/src/main/shell/test-patch.sh
 

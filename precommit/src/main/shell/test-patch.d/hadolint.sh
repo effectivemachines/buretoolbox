@@ -110,27 +110,24 @@ function hadolint_calcdiffs
   declare branch=$1
   declare patch=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # first, pull out just the errors
   # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${branch}" | cut -d' ' -f2- > "${tmp}.branch"
+  "${AWK}" -F: '{print $NF}' "${branch}" | cut -d' ' -f2- > "${tmp}.branch"
 
   # shellcheck disable=SC2016
-  ${AWK} -F: '{print $NF}' "${patch}" | cut -d' ' -f2- > "${tmp}.patch"
+  "${AWK}" -F: '{print $NF}' "${patch}" | cut -d' ' -f2- > "${tmp}.patch"
 
-  ${DIFF} --unchanged-line-format="" \
+  "${DIFF}" --unchanged-line-format="" \
      --old-line-format="" \
      --new-line-format="%dn " \
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${patch}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${patch}" | tail -1
+  done < <(cat "${tmp}.lined")
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -165,13 +162,13 @@ function hadolint_postapply
       > "${PATCH_DIR}/diff-patch-hadolint.txt"
 
   # shellcheck disable=SC2016
-  numPrepatch=$(wc -l "${PATCH_DIR}/branch-hadolint-result.txt" | ${AWK} '{print $1}')
+  numPrepatch=$(wc -l "${PATCH_DIR}/branch-hadolint-result.txt" | "${AWK}" '{print $1}')
 
   # shellcheck disable=SC2016
-  numPostpatch=$(wc -l "${PATCH_DIR}/patch-hadolint-result.txt" | ${AWK} '{print $1}')
+  numPostpatch=$(wc -l "${PATCH_DIR}/patch-hadolint-result.txt" | "${AWK}" '{print $1}')
 
   # shellcheck disable=SC2016
-  diffPostpatch=$(wc -l "${PATCH_DIR}/diff-patch-hadolint.txt" | ${AWK} '{print $1}')
+  diffPostpatch=$(wc -l "${PATCH_DIR}/diff-patch-hadolint.txt" | "${AWK}" '{print $1}')
 
 
   ((fixedpatch=numPrepatch-numPostpatch+diffPostpatch))

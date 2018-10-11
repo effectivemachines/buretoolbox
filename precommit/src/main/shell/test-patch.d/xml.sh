@@ -56,7 +56,7 @@ function xml_postcompile
 
   start_clock
 
-  pushd "${BASEDIR}" >/dev/null
+  pushd "${BASEDIR}" >/dev/null || return 1
   for i in "${CHANGED_FILES[@]}"; do
     if [[ ${i} =~ \.xml$ && -f ${i} ]]; then
       if ! "${js}" -e "XMLDocument(arguments[0])" "${i}" > "${PATCH_DIR}/xml.txt.tmp" 2>&1; then
@@ -72,7 +72,7 @@ function xml_postcompile
     fi
   done
 
-  popd >/dev/null
+  popd >/dev/null || return 1
 
   if [[ -f "${PATCH_DIR}/xml.txt.tmp" ]]; then
     rm "${PATCH_DIR}/xml.txt.tmp"

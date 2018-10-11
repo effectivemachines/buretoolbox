@@ -29,7 +29,7 @@ import urllib2
 import httplib
 import json
 sys.dont_write_bytecode = True
-# pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position,relative-import
 from utils import get_jira, to_unicode, sanitize_text, processrelnote, Outputs
 # pylint: enable=wrong-import-position
 

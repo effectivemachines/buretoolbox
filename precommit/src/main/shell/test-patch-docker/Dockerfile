@@ -169,6 +169,7 @@ RUN curl -L -s -S \
 ###
 # Install npm and JSHint
 ###
+# shellcheck disable=DL3016
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y nodejs npm \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* && \

@@ -122,8 +122,7 @@ function scalac_logfilter
   declare input=$1
   declare output=$2
 
-  #shellcheck disable=SC2016,SC2046
-  ${GREP} "^/.*.scala:[0-9]*:" "${input}" > "${output}"
+  "${GREP}" "^/.*.scala:[0-9]*:" "${input}" > "${output}"
 }
 
 ## @description  Helper for generic_logfilter
@@ -135,6 +134,5 @@ function scaladoc_logfilter
   declare input=$1
   declare output=$2
 
-  #shellcheck disable=SC2016,SC2046
-  ${GREP} "^/.*.scala:[0-9]*:" "${input}" > "${output}"
+  "${GREP}" "^/.*.scala:[0-9]*:" "${input}" > "${output}"
 }

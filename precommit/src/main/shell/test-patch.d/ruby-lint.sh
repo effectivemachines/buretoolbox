@@ -18,7 +18,7 @@ add_test_type ruby_lint
 
 RUBY_LINT_TIMER=0
 
-RUBY_LINT=${RUBY_LINT:-$(which ruby-lint 2>/dev/null)}
+RUBY_LINT=${RUBY_LINT:-$(command -v ruby-lint 2>/dev/null)}
 
 function ruby_lint_usage
 {
@@ -68,13 +68,13 @@ function ruby_lint_preapply
   start_clock
 
   echo "Running ruby-lint against identified ruby scripts."
-  pushd "${BASEDIR}" >/dev/null
+  pushd "${BASEDIR}" >/dev/null || return 1
   for i in "${CHANGED_FILES[@]}"; do
     if [[ ${i} =~ \.rb$ && -f ${i} ]]; then
-      ${RUBY_LINT} -p syntastic "${i}" | sort -t : -k 1,1 -k 3,3n -k 4,4n >> "${PATCH_DIR}/branch-ruby-lint-result.txt"
+      "${RUBY_LINT}" -p syntastic "${i}" | sort -t : -k 1,1 -k 3,3n -k 4,4n >> "${PATCH_DIR}/branch-ruby-lint-result.txt"
     fi
   done
-  popd >/dev/null
+  popd >/dev/null || return 1
   # keep track of how much as elapsed for us already
   RUBY_LINT_TIMER=$(stop_clock)
   return 0
@@ -93,32 +93,27 @@ function ruby_lint_calcdiffs
   declare orig=$1
   declare new=$2
   declare tmp=${PATCH_DIR}/pl.$$.${RANDOM}
-  declare j
 
   # first, strip filenames:line:
   # this keeps column: in an attempt to increase
   # accuracy in case of multiple, repeated errors
   # since the column number shouldn't change
   # if the line of code hasn't been touched
-  # shellcheck disable=SC2016
   cut -f4- -d: "${orig}" > "${tmp}.branch"
-  # shellcheck disable=SC2016
   cut -f4- -d: "${new}" > "${tmp}.patch"
 
   # compare the errors, generating a string of line
   # numbers. Sorry portability: GNU diff makes this too easy
-  ${DIFF} --unchanged-line-format="" \
+  "${DIFF}" --unchanged-line-format="" \
      --old-line-format="" \
      --new-line-format="%dn " \
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
   # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    # shellcheck disable=SC2086
-    head -${j} "${new}" | tail -1
-  done
+  while read -r; do
+    head -"${REPLY}" "${new}" | tail -1
+  done < <(cat "${tmp}.lined")
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -146,16 +141,16 @@ function ruby_lint_postapply
 
   echo "Running ruby-lint against identified ruby scripts."
   # we re-check this in case one has been added
-  pushd "${BASEDIR}" >/dev/null
+  pushd "${BASEDIR}" >/dev/null || return 1
   for i in "${CHANGED_FILES[@]}"; do
     if [[ ${i} =~ \.rb$ && -f ${i} ]]; then
-      ${RUBY_LINT} -p syntastic "${i}" | sort -t : -k 1,1 -k 3,3n -k 4,4n >> "${PATCH_DIR}/patch-ruby-lint-result.txt"
+      "${RUBY_LINT}" -p syntastic "${i}" | sort -t : -k 1,1 -k 3,3n -k 4,4n >> "${PATCH_DIR}/patch-ruby-lint-result.txt"
     fi
   done
-  popd >/dev/null
+  popd >/dev/null || return 1
 
   # shellcheck disable=SC2016
-  RUBY_LINT_VERSION=$(${RUBY_LINT} -v | ${AWK} '{print $2}')
+  RUBY_LINT_VERSION=$("${RUBY_LINT}" -v | "${AWK}" '{print $2}')
   add_footer_table ruby-lint "${RUBY_LINT_VERSION}"
 
   calcdiffs \
@@ -163,13 +158,13 @@ function ruby_lint_postapply
     "${PATCH_DIR}/patch-ruby-lint-result.txt" \
       ruby_lint \
       > "${PATCH_DIR}/diff-patch-ruby-lint.txt"
-  diffPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-ruby-lint.txt")
+  diffPostpatch=$("${AWK}" -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/diff-patch-ruby-lint.txt")
 
   # shellcheck disable=SC2016
-  numPrepatch=$(${AWK} -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-ruby-lint-result.txt")
+  numPrepatch=$("${AWK}" -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/branch-ruby-lint-result.txt")
 
   # shellcheck disable=SC2016
-  numPostpatch=$(${AWK} -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-ruby-lint-result.txt")
+  numPostpatch=$("${AWK}" -F: 'BEGIN {sum=0} 4<NF {sum+=1} END {print sum}' "${PATCH_DIR}/patch-ruby-lint-result.txt")
 
   ((fixedpatch=numPrepatch-numPostpatch+diffPostpatch))
 
