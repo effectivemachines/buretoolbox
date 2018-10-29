@@ -137,7 +137,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y python \
 RUN pip2 install -v pylint==1.9.2 python-dateutil==2.7.3
 
 ####
-# Install ruby, rubocop, and ruby-lint
+# Install ruby and various tools for plug-ins
 ###
 RUN echo 'gem: --no-rdoc --no-ri' >> /root/.gemrc
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y ruby ruby-dev \
@@ -146,6 +146,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y ruby ruby
 RUN gem install rake
 RUN gem install rubocop
 RUN gem install ruby-lint
+RUN gem install puppet-lint
 
 ####
 # Install shellcheck (shell script lint)
