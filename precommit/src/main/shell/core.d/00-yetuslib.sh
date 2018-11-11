@@ -245,6 +245,42 @@ function yetus_comma_to_array
   IFS="${oldifs}"
 }
 
+## @description  Convert a file to an array.
+## @description  Comments on the beginning of the line are stripped.
+## @audience     public
+## @stability    evolving
+## @replaceable  no
+## @param        arrayname
+## @param        file
+## @return       0 for success
+## @return       1+ for failure
+function yetus_file_to_array
+{
+  declare var=$1
+  declare filename=$2
+  declare line
+  declare a
+
+  if [[ ! -f "${filename}" ]]; then
+    yetus_error "ERROR: ${filename} cannot be read."
+    return 1
+  fi
+
+  if [[ "${BASH_VERSINFO[0]}" -gt 3 ]]; then
+    # Using a pipe to input into mapfile doesn't
+    # work due to the variable only being present in
+    # the subshell.  So MUST force the grep into the
+    # subshell...
+    mapfile -t a < <("${GREP}" -v -e '^#' "${filename}" )
+  else
+    while read -r line; do
+      a+=("${line}")
+    done < <("${GREP}" -v -e '^#' "${filename}")
+  fi
+  eval "${var}=(\"\${a[@]}\")"
+  return 0
+}
+
 ## @description  Check if an array has a given value
 ## @audience     public
 ## @stability    stable

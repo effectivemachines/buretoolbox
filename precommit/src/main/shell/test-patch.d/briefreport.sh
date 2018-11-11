@@ -96,6 +96,7 @@ function briefreport_finalreport
   declare hours
   declare newtime
   declare havelogs=false
+  declare fn
 
   if [[ -z "${BRIEFOUT_REPORTFILE}" ]]; then
     return
@@ -234,8 +235,11 @@ function briefreport_finalreport
         comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
                     cut -f3 -d\| |
                     "${SED}" -e "s,@@BASE@@,${PATCH_DIR},g")
-        # shellcheck disable=SC2016
-        size=$(du -sh "${comment// }" | "${AWK}" '{print $1}')
+        fn="${comment// }"
+        if [[ -f ${fn} ]]; then
+          # shellcheck disable=SC2016
+          size=$(du -sh "${fn}" | "${AWK}" '{print $1}')
+        fi
         if [[ -n "${BUILD_URL}" ]]; then
           comment=$(echo "${TP_FOOTER_TABLE[${i}]}" |
                     cut -f3 -d\| |

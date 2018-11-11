@@ -15,7 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 pipeline {
-  agent any
+  agent {
+    docker 'awwashere/buretoolbox'
+  }
   triggers {
     cron('@daily')
   }
@@ -36,7 +38,6 @@ pipeline {
     stage ('precommit-run') {
       steps {
         sh '''#!/usr/bin/env bash
-            env
             if [[ -d "${WORKSPACE}/${YETUS_RELATIVE_PATCHDIR}" ]]; then
               rm -rf "${WORKSPACE}/${YETUS_RELATIVE_PATCHDIR}"
             fi
@@ -49,10 +50,11 @@ pipeline {
             YETUS_ARGS+=("--resetrepo")
 
             # Enable maven custom repos in order to avoid multiple executor clashes
-            YETUS_ARGS+=("--mvn-custom-repos")
+            #YETUS_ARGS+=("--mvn-custom-repos")
+            #YETUS_ARGS+=("--mvn-custom-repos-dir=/tmp/m2")
 
             # run in docker mode
-            YETUS_ARGS+=("--docker")
+            #YETUS_ARGS+=("--docker")
 
             # temp storage, etc
             YETUS_ARGS+=("--patch-dir=${WORKSPACE}/${YETUS_RELATIVE_PATCHDIR}")
@@ -78,6 +80,7 @@ pipeline {
 
             /usr/bin/env bash "${TESTPATCHBIN}" "${YETUS_ARGS[@]}"
 
+            sleep 100
             '''
       }
     }
