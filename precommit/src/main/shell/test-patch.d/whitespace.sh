@@ -18,7 +18,7 @@
 
 
 WHITESPACE_EOL_IGNORE_LIST=
-WHITESPACE_TABS_IGNORE_LIST=Makefile
+WHITESPACE_TABS_IGNORE_LIST='.*Makefile.*'
 
 add_test_type whitespace
 
