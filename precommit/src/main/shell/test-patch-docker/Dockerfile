@@ -39,6 +39,8 @@ ENV DEBCONF_TERSE true
 # some git repos need ssh-client so do it too
 ######
 RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
+    apt-transport-https \
+    ca-certificates \
     curl \
     git \
     locales \
@@ -97,6 +99,18 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y cmake \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+###
+# Install docker
+###
+RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+RUN add-apt-repository -y \
+   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
+   $(lsb_release -cs) \
+   stable"
+RUN apt-get -q update && apt-get -q install --no-install-recommends -y docker-ce \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 ######
 # Install findbugs
 ######
@@ -138,7 +152,7 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
     python3-dev \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-RUN pip3 install -v pylint==2.1.1
+RUN pip3 install -v pylint==2.1.1 docker-compose
 RUN mv /usr/local/bin/pylint /usr/local/bin/pylint3
 
 ######

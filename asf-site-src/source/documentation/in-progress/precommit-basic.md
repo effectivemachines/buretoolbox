@@ -322,7 +322,7 @@ test-patch also has a mode to utilize Docker:
 $ test-patch.sh (other options) --docker
 ```
 
-This will do some preliminary setup and then re-execute itself inside a Docker container.  For more information on how to provide a custom Dockerfile and other Docker-specific features, see the advanced guide.
+This will do some preliminary setup and then re-execute itself inside a Docker container.  For more information on how to provide a custom Dockerfile and other Docker-specific features, see [precommit-docker](../precommit-docker) for more information.
 
 # In Closing
 
