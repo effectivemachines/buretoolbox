@@ -74,7 +74,9 @@ function guess_patch_file
 }
 
 ## @description  Given ${PATCH_OR_ISSUE}, determine what type of patch file is in use,
-## @description  and do the necessary work to place it into ${PATCH_DIR}/patch.
+## @description  and do the necessary work to place it into ${INPUT_PATCH_FILE}.
+## @description  If the system support diff files as well, put the diff version in
+## @description  ${INPUT_DIFF_FILE} so that any supported degraded modes work.
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
@@ -93,22 +95,27 @@ function locate_patch
     cleanup_and_exit 1
   fi
 
+  INPUT_PATCH_FILE="${PATCH_DIR}/input.patch"
+  INPUT_DIFF_FILE="${PATCH_DIR}/input.diff"
+
   echo "Processing: ${PATCH_OR_ISSUE}"
   # it's a declarely provided file
   if [[ -f ${PATCH_OR_ISSUE} ]]; then
     patchfile="${PATCH_OR_ISSUE}"
     PATCH_SYSTEM=generic
-    if [[ -f "${PATCH_DIR}/patch" ]]; then
-      "${DIFF}" -q "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch" >/dev/null
-      if [[ $? -eq 1 ]]; then
-        rm "${PATCH_DIR}/patch"
+    if [[ -f "${INPUT_PATCH_FILE}" ]]; then
+      if ! "${DIFF}" -q "${PATCH_OR_ISSUE}" "${INPUT_PATCH_FILE}" >/dev/null; then
+        rm "${INPUT_PATCH_FILE}"
       fi
     fi
   else
     # run through the bug systems.  maybe they know?
     for bugsys in ${BUGSYSTEMS}; do
       if declare -f "${bugsys}_locate_patch" >/dev/null 2>&1; then
-        if "${bugsys}_locate_patch" "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"; then
+        if "${bugsys}_locate_patch" \
+            "${PATCH_OR_ISSUE}" \
+            "${INPUT_PATCH_FILE}" \
+            "${INPUT_DIFF_FILE}"; then
           gotit=true
           PATCH_SYSTEM=${bugsys}
         fi
@@ -121,7 +128,7 @@ function locate_patch
 
     # ok, none of the bug systems know. let's see how smart we are
     if [[ ${gotit} == false ]]; then
-      if ! generic_locate_patch "${PATCH_OR_ISSUE}" "${PATCH_DIR}/patch"; then
+      if ! generic_locate_patch "${PATCH_OR_ISSUE}" "${INPUT_PATCH_FILE}"; then
         yetus_error "ERROR: Unsure how to process ${PATCH_OR_ISSUE}."
         cleanup_and_exit 1
       fi
@@ -131,9 +138,9 @@ function locate_patch
 
   yetus_debug "Determined patch system to be ${PATCH_SYSTEM}"
 
-  if [[ ! -f "${PATCH_DIR}/patch"
+  if [[ ! -f "${INPUT_PATCH_FILE}"
       && -f "${patchfile}" ]]; then
-    if cp "${patchfile}" "${PATCH_DIR}/patch"; then
+    if cp "${patchfile}" "${INPUT_PATCH_FILE}"; then
       echo "Patch file ${patchfile} copied to ${PATCH_DIR}"
     else
       yetus_error "ERROR: Could not copy ${patchfile} to ${PATCH_DIR}"
@@ -162,7 +169,7 @@ function patchfile_verify_zero
   # shellcheck disable=SC2016
   changed_files1=$("${AWK}" 'function p(s){if(s!~"^/dev/null"){print s}}
     /^diff --git /   { p($3); p($4) }
-    /^(\+\+\+|---) / { p($2) }' "${PATCH_DIR}/patch" | sort -u)
+    /^(\+\+\+|---) / { p($2) }' "${INPUT_PATCH_FILE}" | sort -u)
 
   # maybe we interpreted the patch wrong? check the log file
   # shellcheck disable=SC2016
@@ -206,7 +213,7 @@ function gitapply_dryrun
 
   while [[ ${prefixsize} -lt 4
     && -z ${PATCH_METHOD} ]]; do
-    if yetus_run_and_redirect "${PATCH_DIR}/patch-dryrun.log" \
+    if yetus_run_and_redirect "${PATCH_DIR}/input-dryrun.log" \
        "${GIT}" apply --binary -v --check "-p${prefixsize}" "${patchfile}"; then
       PATCH_LEVEL=${prefixsize}
       PATCH_METHOD=gitapply
@@ -216,7 +223,7 @@ function gitapply_dryrun
   done
 
   if [[ ${prefixsize} -eq 0 ]]; then
-    if ! patchfile_verify_zero "${PATCH_DIR}/patch-dryrun.log"; then
+    if ! patchfile_verify_zero "${PATCH_DIR}/input-dryrun.log"; then
       PATCH_METHOD=""
       PATCH_LEVEL=""
       gitapply_dryrun "${patchfile}" 1
@@ -237,7 +244,7 @@ function patchcmd_dryrun
   while [[ ${prefixsize} -lt 4
     && -z ${PATCH_METHOD} ]]; do
     # shellcheck disable=SC2153
-    if yetus_run_and_redirect "${PATCH_DIR}/patch-dryrun.log" \
+    if yetus_run_and_redirect "${PATCH_DIR}/input-dryrun.log" \
       "${PATCH}" "-p${prefixsize}" -E --dry-run < "${patchfile}"; then
       PATCH_LEVEL=${prefixsize}
       PATCH_METHOD=patchcmd
@@ -247,7 +254,7 @@ function patchcmd_dryrun
   done
 
   if [[ ${prefixsize} -eq 0 ]]; then
-    if ! patchfile_verify_zero "${PATCH_DIR}/patch-dryrun.log"; then
+    if ! patchfile_verify_zero "${PATCH_DIR}/input-dryrun.log"; then
       PATCH_METHOD=""
       PATCH_LEVEL=""
       patchcmd_dryrun "${patchfile}" 1

@@ -49,6 +49,12 @@ function common_defaults
     PATCH_DIR=/tmp/yetus-${RANDOM}.${RANDOM}
   done
   #shellcheck disable=SC2034
+  INPUT_PATCH_FILE=""
+  #shellcheck disable=SC2034
+  INPUT_DIFF_FILE=""
+  #shellcheck disable=SC2034
+  INPUT_APPLIED_FILE=""
+  #shellcheck disable=SC2034
   PATCH_METHOD=""
   #shellcheck disable=SC2034
   PATCH_METHODS=("gitapply" "patchcmd")
