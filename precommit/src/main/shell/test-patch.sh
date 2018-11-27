@@ -2527,11 +2527,15 @@ function column_calcdiffs
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
-  # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    head -"${j}" "${patch}" | tail -1
-  done
+  if [[ "${BUILDMODE}" == full ]]; then
+    cat "${patch}"
+  else
+    # now, pull out those lines of the raw output
+    # shellcheck disable=SC2013
+    for j in $(cat "${tmp}.lined"); do
+      head -"${j}" "${patch}" | tail -1
+    done
+  fi
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
@@ -2567,11 +2571,15 @@ function error_calcdiffs
      "${tmp}.branch" \
      "${tmp}.patch" > "${tmp}.lined"
 
-  # now, pull out those lines of the raw output
-  # shellcheck disable=SC2013
-  for j in $(cat "${tmp}.lined"); do
-    head -"${j}" "${patch}" | tail -1
-  done
+  if [[ "${BUILDMODE}" == full ]]; then
+    cat "${patch}"
+  else
+    # now, pull out those lines of the raw output
+    # shellcheck disable=SC2013
+    for j in $(cat "${tmp}.lined"); do
+      head -"${j}" "${patch}" | tail -1
+    done
+  fi
 
   rm "${tmp}.branch" "${tmp}.patch" "${tmp}.lined" 2>/dev/null
 }
