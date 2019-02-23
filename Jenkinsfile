@@ -142,7 +142,7 @@ pipeline {
                 YETUS_ARGS+=(--jira-user="${JIRA_USER}")
 
                 # disable per-line comments
-                YETUS_ARGS+=(--linecomments='')
+                #YETUS_ARGS+=(--linecomments='')
 
                 # pylint settings
                 YETUS_ARGS+=('--pylint=pylint2')
