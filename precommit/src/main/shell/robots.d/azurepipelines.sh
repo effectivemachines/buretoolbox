@@ -40,10 +40,12 @@ if [[ "${TF_BUILD}" = True ]] &&
 
     echo "${SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}_build?definitionId=${SYSTEM_DEFINITIONID}"
 
-    BUILD_URL="${SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${SYSTEM_TEAMPROJECT}/_build/results?${BUILD_BUILDID}"
-    BUILD_URL_ARTIFACTS="${SYSTEM_TEAMPROJECTID}/_apis/build/builds/${BUILD_BUILDID}/artifacts?artifactName=yetus&fileName=apply-patch-git-apply.log&api-version=5.0-preview.3"
-    BUILD_URL_CONSOLE="/_build/results?${BUILD_BUILDID}"
+    BUILD_URL="${SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${SYSTEM_TEAMPROJECT}"
+    #BUILD_URL_ARTIFACTS="${SYSTEM_TEAMPROJECTID}/_apis/build/builds/${BUILD_BUILDID}/artifacts?artifactName=yetus&fileName=apply-patch-git-apply.log&api-version=5.0-preview.3"
+    BUILD_URL_CONSOLE="/_build/results?buildId=${BUILD_BUILDID}"
     CONSOLE_USE_BUILD_URL=true
+
+    echo "${BUILD_URL_CONSOLE}"
 
     if [[ -n "${BUILD_SOURCESDIRECTORY}" ]] && [[ -d "${BUILD_SOURCESDIRECTORY}" ]]; then
       BASEDIR=${BUILD_SOURCESDIRECTORY}
