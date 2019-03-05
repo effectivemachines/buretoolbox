@@ -18,7 +18,7 @@
 # SHELLDOC-IGNORE
 
 # shellcheck disable=2034
-if [[ "${TF_BUILD}" = true ]] &&
+if [[ "${TF_BUILD}" = True ]] &&
   declare -f compile_cycle >/dev/null; then
   if [[ ${BUILD_REPOSITORY_URI} =~ github.com ]]; then
 
