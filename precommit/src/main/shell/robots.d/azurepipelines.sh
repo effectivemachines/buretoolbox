@@ -18,7 +18,7 @@
 # SHELLDOC-IGNORE
 
 # shellcheck disable=2034
-if [[ -n "${AZURE_HTTP_USER_AGENT}" ]] &&
+if [[ "${TF_BUILD}" = true ]] &&
   declare -f compile_cycle >/dev/null; then
   if [[ ${BUILD_REPOSITORY_URI} =~ github.com ]]; then
 
@@ -37,9 +37,13 @@ if [[ -n "${AZURE_HTTP_USER_AGENT}" ]] &&
     ROBOT=true
     ROBOTTYPE=azurepipelines
 
-    BUILD_URL="${SYSTEM_TEAMFOUNDATIONSERVERURI}${SYSTEM_TEAMPROJECT}/_build/results?${BUILD_BUILDID}"
-    BUILD_URL_CONSOLE=""
-    CONSOLE_USE_BUILD_URL=false
+
+    echo "${SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}_build?definitionId=${SYSTEM_DEFINITIONID}"
+
+    BUILD_URL="${SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${SYSTEM_TEAMPROJECT}/_build/results?${BUILD_BUILDID}"
+    BUILD_URL_ARTIFACTS="${SYSTEM_TEAMPROJECTID}/_apis/build/builds/${BUILD_BUILDID}/artifacts?artifactName=yetus&fileName=apply-patch-git-apply.log&api-version=5.0-preview.3"
+    BUILD_URL_CONSOLE="/_build/results?${BUILD_BUILDID}"
+    CONSOLE_USE_BUILD_URL=true
 
     if [[ -n "${BUILD_SOURCESDIRECTORY}" ]] && [[ -d "${BUILD_SOURCESDIRECTORY}" ]]; then
       BASEDIR=${BUILD_SOURCESDIRECTORY}
@@ -70,7 +74,6 @@ if [[ -n "${AZURE_HTTP_USER_AGENT}" ]] &&
     fi
 
     add_docker_env \
-      AZURE_HTTP_USER_AGENT \
       BUILD_ARTIFACTSTAGINGDIRECTORY \
       BUILD_BUILDID \
       BUILD_REPOSITORY_ID \
@@ -79,8 +82,10 @@ if [[ -n "${AZURE_HTTP_USER_AGENT}" ]] &&
       BUILD_SOURCESDIRECTORY \
       SYSTEM_PULLREQUEST_PULLREQUESTNUMBER \
       SYSTEM_PULLREQUEST_TARGETBRANCH \
-      SYSTEM_TEAMFOUNDATIONSERVERURI \
-      SYSTEM_TEAMPROJECT
+      SYSTEM_TEAMFOUNDATIONCOLLECTIONURI \
+      SYSTEM_TEAMPROJECT \
+      SYSTEM_TEAMPROJECTID \
+      TF_BUILD
 
     yetus_add_array_element EXEC_MODES Azure_Pipelines
   fi
