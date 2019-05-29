@@ -33,6 +33,6 @@ gem "tzinfo-data", platforms: [:mswin, :mingw, :jruby]
 
 gem 'redcarpet', github: 'vmg/redcarpet'
 
-gem 'rake', '10.3.1'
+gem 'rake', '12.3.2'
 
 gem 'therubyracer'
