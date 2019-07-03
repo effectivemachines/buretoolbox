@@ -25,6 +25,8 @@
 * [Azure Pipelines](#azure-pipelines)
 * [Circle CI](#circle-ci)
 * [Cirrus CI](#cirrus-ci)
+* [Drone](#drone)
+* [GitHub Actions](#github-actions)
 * [Gitlab CI](#gitlab-ci)
 * [Jenkins](#jenkins)
 * [Semaphore CI](#semaphore-ci)
@@ -132,6 +134,16 @@ yetus_task:
 See also:
 
 * Apache Yetus' source tree [.cirrus.yml](https://github.com/apache/yetus/blob/master/.cirrus.yml) for some tips and tricks.
+
+# Drone
+
+TRIGGER: ${DRONE}=true and ${DRONE_SYSTEM_VERSION} not empty
+
+Drone lacks built-in support for artifacts.  Therefore setting `--patch-dir` and other settings will be required for generated log data to not be lost.  Similar to other CI systems, Apache Yetus will reset the appropriate git references in the cloned repository.
+
+See also:
+
+* Apache Yetus' source tree [.drone.yml](https://github.com/apache/yetus/blob/master/.drone.yaml) for some tips and tricks.
 
 # GitHub Actions
 
