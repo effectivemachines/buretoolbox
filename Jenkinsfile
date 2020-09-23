@@ -83,7 +83,7 @@ pipeline {
                 YETUS_ARGS+=("--mvn-custom-repos")
 
                 # turn on the sentinel to keep our build systems clean
-                YETUS_ARGS+=(--sentinel)
+                #YETUS_ARGS+=(--sentinel)
 
                 # lots of different output formats
                 YETUS_ARGS+=("--brief-report-file=${WORKSPACE}/${YETUS_RELATIVE_PATCHDIR}/brief.txt")
@@ -100,12 +100,9 @@ pipeline {
                 YETUS_ARGS+=(--java-home=/usr/lib/jvm/java-8-openjdk-amd64)
 
                 # enable writing back to ASF JIRA
-                YETUS_ARGS+=(--jira-issue-re='^YETUS-[0-9]*$')
-                YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
-                YETUS_ARGS+=(--jira-user="${JIRA_USER}")
-
-                # disable per-line comments
-                YETUS_ARGS+=(--linecomments='')
+                #YETUS_ARGS+=(--jira-issue-re='^YETUS-[0-9]*$')
+                #YETUS_ARGS+=(--jira-password="${JIRA_PASSWORD}")
+                #YETUS_ARGS+=(--jira-user="${JIRA_USER}")
 
                 # pylint settings
                 YETUS_ARGS+=('--pylint=pylint2')

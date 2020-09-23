@@ -39,9 +39,12 @@ GITHUB_TOKEN="${GITHUB_TOKEN-}"
 GITHUB_ISSUE=""
 GITHUB_USE_EMOJI_VOTE=false
 declare -a GITHUB_AUTH
+GITHUB_CHECK_RUN_ID=""
+GITHUB_SHA=${GITHUB_SHA:-""}
 
 # private globals...
 GITHUB_BRIDGED=false
+declare -a GITHUB_AUTH
 
 # Simple function to set a default GitHub user after PROJECT_NAME has been set
 function github_set_github_user
@@ -431,7 +434,6 @@ function github_locate_sha_patch
   # locate the PR number via GitHub API v3
   #curl https://api.github.com/search/issues?q=sha:40a7af3377d8087779bf8ad66397947b7270737a\&type:pr\&repo:apache/yetus
 
-
    # Let's pull the PR JSON for later use
   if ! "${CURL}" --silent --fail \
           -H "Accept: application/vnd.github.v3.full+json" \
@@ -482,6 +484,111 @@ function github_locate_patch
   esac
 }
 
+thisisfake=1
+
+function github_precheck
+{
+  declare tempfile="${PATCH_DIR}/ghcheckrun.$$.${RANDOM}"
+  declare output="${PATCH_DIR}/ghcheckrun.json"
+
+  if [[ -z "${GITHUB_SHA}" ]]; then
+    GITHUB_SHA=$("${GREP}" \"sha\" "${PATCH_DIR}/github-pull.json" 2>/dev/null \
+      | head -1 \
+      | cut -f4 -d\")
+  fi
+
+  if [[ -z "${GITHUB_SHA}" ]]; then
+    return 0
+  fi
+
+  # don't need this under GHA
+  if [[ "${ROBOTTYPE}" == 'githubactions' ]]; then
+    return 0
+  fi
+
+  if [[ "${OFFLINE}" == true ]]; then
+    return 0
+  fi
+
+  if [[ "${#GITHUB_AUTH[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  {
+    printf "{"
+    echo "\"name\":\"Apache Yetus($ROBOTTYPE)\","
+    echo "\"head_sha\": \"${GITHUB_SHA}\","
+    echo "\"details_url\": \"${BUILD_URL}${BUILD_URL_CONSOLE}\","
+    echo "\"status\": \"in_progress\","
+    # external_id  instance_id?
+    # status queued, in_progress, completed
+    # started_at ISO-8601
+    # conclusion , required for status=completed, completed_at=value
+    #  success, failure, neutral, cancelled, skipped, timed_out, action_required
+    # completed_at  ISO-8601
+    # output  see github docs @ https://docs.github.com/en/rest/reference/checks#update-a-check-run
+    echo "}"
+  } > "${tempfile}"
+
+  "${CURL}" -X POST \
+    -H "Accept: application/vnd.github.antiope-preview+json" \
+    -H "Content-Type: application/json" \
+     "${GITHUB_AUTH[@]}" \
+    -d @"${tempfile}" \
+    --location \
+    "${GITHUB_API_URL}/repos/${GITHUB_REPO}/check-runs" \
+    --output "${output}"
+  GITHUB_CHECK_RUN_ID=$("${GREP}" \"id\" "${output}" 2>/dev/null \
+    | head -1 \
+    | cut -f2 -d: \
+    | cut -f1 -d,)
+  rm "${tempfile}"
+}
+
+function github_exit
+{
+  declare result=$1
+  declare tempfile="${PATCH_DIR}/ghcheckrun.$$.${RANDOM}"
+  declare output="${PATCH_DIR}/ghcheckrun-final.json"
+  declare conclusion
+
+  # don't need this under GHA
+  if [[ "${ROBOTTYPE}" == 'githubactions' ]]; then
+    return 0
+  fi
+
+  if [[ "${OFFLINE}" == true ]]; then
+    return 0
+  fi
+
+  if [[ "${#GITHUB_AUTH[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  if [[ "${result}" -eq 0 ]]; then
+    conclusion="success"
+  else
+    conclusion="failure"
+  fi
+
+  {
+    printf "{"
+    echo "\"conclusion\":\"${conclusion}\","
+    echo "\"status\": \"completed\","
+    echo "}"
+  } > "${tempfile}"
+
+  "${CURL}" -X PATCH \
+    -H "Accept: application/vnd.github.antiope-preview+json" \
+    -H "Content-Type: application/json" \
+     "${GITHUB_AUTH[@]}" \
+    -d @"${tempfile}" \
+    --location \
+    "${GITHUB_API_URL}/repos/${GITHUB_REPO}/check-runs/${GITHUB_CHECK_RUN_ID}" \
+    --output "${output}" 2>/dev/null
+  rm "${tempfile}"
+}
+
 function github_linecomments
 {
   declare file=$1
@@ -490,6 +597,10 @@ function github_linecomments
   declare plugin=$4
   shift 4
   declare text=$*
+  declare tempfile="${PATCH_DIR}/ghcomment.$$.${RANDOM}"
+  declare header
+  declare -a linehandler
+  declare -a colhandler
 
   if [[ "${ROBOTTYPE}" == 'githubactions' ]]; then
     if [[ -z "${column}" ]] || [[ "${column}" == 0 ]]; then
@@ -499,6 +610,68 @@ function github_linecomments
     fi
     return 0
   fi
+
+  if [[ "${OFFLINE}" == true ]]; then
+    echo "Github Plugin: Running in offline, comment skipped."
+    return 0
+  fi
+
+  if [[ -z "${GITHUB_CHECK_RUN_ID}" ]]; then
+    return 0
+  fi
+
+  if [[ "${#GITHUB_AUTH[@]}" -eq 0 ]]; then
+    return 0
+  fi
+
+  linehandler=("start_line": "${line},")
+  linehandler+=("end_line": "${line},")
+
+  if [[ -n "${uniline}" ]]; then
+    colhandler=("start_column": "${uniline},")
+    colhandler+=("end_column": "${uniline},")
+  else
+    colhandler=()
+  fi
+
+  newtext=$(echo "${text[*]}" | "${SED}" -e 's,\\,\\\\,g' \
+        -e 's,\",\\\",g' \
+        -e 's,$,\\r\\n,g' \
+      | tr -d '\n')
+
+  if [[ "${ROBOTTYPE}" ]]; then
+    header="Apache Yetus(${ROBOTTYPE})"
+  else
+    header="Apache Yetus"
+  fi
+
+  set +x
+
+çat <<EOF > "${tempfile}"
+{
+  "output": {
+    "title": "${header}",
+    "summary": "Precommit Problem",
+    "annotations" : {
+      "path": "${file}",
+      ${linehandler[@]}
+      ${colhandler[@]}
+      "annotation_level": "failure",
+      "message": "${newtext}"
+    }
+  }
+}
+EOF
+
+  "${CURL}" -X PATCH \
+    -H "Accept: aapplication/vnd.github.antiope-preview+json" \
+    -H "Content-Type: application/json" \
+     "${GITHUB_AUTH[@]}" \
+    -d @"${tempfile}" \
+    --silent --location \
+    "${GITHUB_API_URL}/repos/${GITHUB_REPO}/check-runs/${GITHUB_CHECK_RUN_ID}" \
+    >/dev/null 2>&1
+  rm "${tempfile}"
 }
 
 ## @description Write the contents of a file to github
@@ -513,6 +686,10 @@ function github_write_comment
 
   if [[ "${OFFLINE}" == true ]]; then
     echo "Github Plugin: Running in offline, comment skipped."
+    return 0
+  fi
+
+  if [[ "${#GITHUB_AUTH[@]}" -eq 0 ]]; then
     return 0
   fi
 
@@ -695,9 +872,14 @@ function github_status_write()
 {
   declare filename=$1
   declare retval=0
+  declare retval=0
 
-  if [[ "${#GITHUB_AUTH[@]}" -lt 1 ]]; then
-    echo "Github Plugin: no credentials provided to write a status."
+  if [[ "${OFFLINE}" == true ]]; then
+    echo "Github Plugin: Running in offline, status skipped."
+    return 0
+  fi
+
+  if [[ "${#GITHUB_AUTH[@]}" -eq 0 ]]; then
     return 0
   fi
 
