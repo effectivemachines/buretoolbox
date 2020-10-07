@@ -90,6 +90,8 @@ function htmlout_finalreport
 
   url=$(get_artifact_url)
 
+  echo ">${url}<"
+
   rm "${commentfile}" 2>/dev/null
 
   if [[ -z "${HTMLOUT_REPORTFILE}" ]]; then
