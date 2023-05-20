@@ -23,6 +23,7 @@ import os
 import pathlib
 import re
 import sys
+import typing as t
 
 from argparse import ArgumentParser
 
@@ -145,9 +146,9 @@ class ProcessFile:
 
     FUNCTIONRE = re.compile(r"^(\w+) *\(\) *{")
 
-    def __init__(self, filename=None, skipsuperprivate=False):
+    def __init__(self, filename: str, skipsuperprivate=False):
         self.filename = filename
-        self.functions = []
+        self.functions: list[ShellFunction] = []
         self.skipsuperprivate = skipsuperprivate
 
     def isignored(self):
@@ -170,33 +171,33 @@ class ProcessFile:
             return False
 
     @staticmethod
-    def _docstrip(key, dstr):
+    def _docstrip(key, dstr:str):
         '''remove extra spaces from shelldoc phrase'''
         dstr = re.sub(f"^## @{key} ", "", dstr)
         dstr = dstr.strip()
         return dstr
 
-    def _process_description(self, funcdef, text=None):
+    def _process_description(self, funcdef: ShellFunction , text: str):
         if not text:
             funcdef.description = []
             return
         funcdef.description.append(self._docstrip('description', text))
 
-    def _process_audience(self, funcdef, text=None):
+    def _process_audience(self, funcdef: ShellFunction, text: str):
         '''set the audience of the function'''
         if not text:
             return
         funcdef.audience = self._docstrip('audience', text)
         funcdef.audience = funcdef.audience.capitalize()
 
-    def _process_stability(self, funcdef, text=None):
+    def _process_stability(self, funcdef: ShellFunction, text: str):
         '''set the stability of the function'''
         if not text:
             return
         funcdef.stability = self._docstrip('stability', text)
         funcdef.stability = funcdef.stability.capitalize()
 
-    def _process_replaceable(self, funcdef, text=None):
+    def _process_replaceable(self, funcdef: ShellFunction, text: str):
         '''set the replacement state'''
         if not text:
             return
@@ -210,14 +211,14 @@ class ProcessFile:
         else:
             funcdef.replacetext = 'Not Replaceable'
 
-    def _process_param(self, funcdef, text=None):
+    def _process_param(self, funcdef: ShellFunction, text: str):
         '''add a parameter'''
         if not text:
             funcdef.params = []
             return
         funcdef.params.append(self._docstrip('param', text))
 
-    def _process_return(self, funcdef, text=None):
+    def _process_return(self, funcdef: ShellFunction, text: str):
         '''add a return value'''
         if not text:
             funcdef.returnt = []
@@ -225,7 +226,7 @@ class ProcessFile:
         funcdef.returnt.append(self._docstrip('return', text))
 
     @staticmethod
-    def _process_function(funcdef, text=None, linenum=1):
+    def _process_function(funcdef: ShellFunction, text: str, linenum=1):
         '''set the name of the function'''
         if ProcessFile.FUNCTIONRE.match(text):
             definition = ProcessFile.FUNCTIONRE.match(text).groups()[0]
@@ -249,7 +250,6 @@ class ProcessFile:
 
         if self.isignored():
             return
-
         try:
             with open(self.filename, "r") as shellcode:  #pylint: disable=unspecified-encoding
                 # if the file contains a comment containing
@@ -285,13 +285,13 @@ class ProcessFile:
 class MarkdownReport:
     ''' generate a markdown report '''
 
-    def __init__(self, functions, filename=None):
+    def __init__(self, functions: list[ShellFunction], filename: str):
         self.filename = filename
         self.filepath = pathlib.Path(self.filename)
         if functions:
             self.functions = sorted(functions)
         else:
-            self.functions = None
+            self.functions = []
 
     def write_tableofcontents(self, fhout):
         '''build a table of contents'''
@@ -321,24 +321,24 @@ class MarkdownReport:
                 outfile.write(function.getdocpage())
 
 
-def process_input(inputlist, skipprnorep):
+def process_input(inputlist: list[str], skipprnorep: bool):
     """ take the input and loop around it """
 
-    def call_process_file(filename, skipsuperprivate):
+    def call_process_file(filename: str, skipsuperprivate:bool) -> list[ShellFunction]:
         ''' handle building a ProcessFile '''
         fileprocessor = ProcessFile(filename=filename,
                                     skipsuperprivate=skipsuperprivate)
         fileprocessor.process_file()
         return fileprocessor.functions
 
-    allfuncs = []
+    allfuncs: list[ShellFunction] = []
     for inputname in inputlist:
         if pathlib.Path(inputname).is_dir():
-            for dirpath, dirnames, filenames in os.walk(inputname):  #pylint: disable=unused-variable
+            for dirpath, _, filenames in os.walk(inputname):  #pylint: disable=unused-variable
                 for fname in filenames:
                     if fname.endswith('sh'):
                         allfuncs = allfuncs + call_process_file(
-                            filename=pathlib.Path(dirpath).joinpath(fname),
+                            filename=str(pathlib.Path(dirpath).joinpath(fname)),
                             skipsuperprivate=skipprnorep)
         else:
             allfuncs = allfuncs + call_process_file(
