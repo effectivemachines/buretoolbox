@@ -78,7 +78,7 @@ Options currently supported are:
 | continuousimprovement | same as `--continuous-improvement`  | false                                                      | [Robots](..)                                 |
 | excludes              | same as `--excludes`                | `.yetus/excludes.txt`                                      | [Usage Introduction](../../usage-intro)      |
 | githubtoken           | same as `--github-token`            | NONE                                                       | [GitHub plug-in](../../plugins/github)       |
-| javahome              | same as `--java-home`               | `/usr/lib/jvm/java-11-openjdk-amd64`                       | [Java-related plug-ins](../../plugins/javac) |
+| javahome              | same as `--java-home`               | `/usr/lib/jvm/java-21-openjdk-amd64`                       | [Java-related plug-ins](../../plugins/javac) |
 | patchdir              | same as `--patch-dir`               | NONE                                                       | [Usage Introduction](../../usage-intro)      |
 | pip                   | same as `--pylint-pip`              | pip3                                                       | [pylint plug-in](../../plugins/pylint)       |
 | plugins               | same as `--plugins`                 | all,-asflicense,-author,-findbugs,-gitlab,-jira,-shelldocs | [Usage Introduction](../../usage-intro)      |

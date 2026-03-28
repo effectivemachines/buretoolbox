@@ -26,7 +26,6 @@ yetus_task:
              --console-report-file=/tmp/yetus-out/console.txt
              --csv-report-file=/tmp/yetus-out/report.csv
              --html-report-file=/tmp/yetus-out/report.html
-             --java-home=/usr/lib/jvm/java-11-openjdk-amd64
              --junit-report-xml=/tmp/yetus-out/junit.xml
              --plugins=all
              --junit-report-xml=line

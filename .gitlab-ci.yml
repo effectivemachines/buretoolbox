@@ -23,7 +23,6 @@ buretoolbox-job:
       precommit/src/main/shell/test-patch.sh
       --patch-dir=/tmp/yetus-out
       --plugins=all
-      --java-home=/usr/lib/jvm/java-11-openjdk-amd64
       --html-report-file=/tmp/yetus-out/report.html
       --csv-report-file=/tmp/yetus-out/report.csv
       --console-report-file=/tmp/yetus-out/console.txt
