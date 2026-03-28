@@ -18,6 +18,8 @@
 yetus_task:
   container:
     image: ghcr.io/effectivemachines/buretoolbox:main
+  env:
+    JAVA_HOME: /usr/lib/jvm/default-java
   test_script: >
              ${CIRRUS_WORKING_DIR}/precommit/src/main/shell/test-patch.sh
              --basedir="${CIRRUS_WORKING_DIR}"
