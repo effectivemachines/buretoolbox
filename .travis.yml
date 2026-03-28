@@ -31,7 +31,7 @@ script:
     --docker
     --patch-dir=/tmp/yetus-out
     --plugins=all,-detsecrets
-    --docker-cache-from=ghcr.io/apache/yetus:main
+    --docker-cache-from=ghcr.io/effectivemachines/buretoolbox:main
     --html-report-file=/tmp/yetus-out/report.html
     --console-report-file=/tmp/yetus-out/console.txt
     --brief-report-file=/tmp/yetus-out/brief.txt
