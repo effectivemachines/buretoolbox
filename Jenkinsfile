@@ -132,10 +132,10 @@ pipeline {
                 # run in docker mode and specifically point to our
                 # Dockerfile since we don't want to use the auto-pulled version.
                 if [[ "${USE_DOCKER_FLAG}" == true ]]; then
-                  docker pull ubuntu:jammy
+                  docker pull ubuntu:noble
                   YETUS_ARGS+=("--docker")
                   YETUS_ARGS+=("--dockerfile=${YETUS_DOCKERFILE}")
-                  YETUS_ARGS+=("--docker-cache-from=ghcr.io/apache/yetus-base:main")
+                  YETUS_ARGS+=("--docker-cache-from=ghcr.io/effectivemachines/buretoolbox:main")
                 else
                   # need to figure this out programmatically; hard-coded for now
                   export JAVA_HOME=/home/jenkins/tools/java/latest1.8

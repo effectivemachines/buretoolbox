@@ -48,7 +48,7 @@ jobs:
           --console-report-file="${GITHUB_WORKSPACE}/out/console.txt"
           --csv-report-file="${GITHUB_WORKSPACE}/out/report.csv"
           --docker
-          --docker-cache-from=ghcr.io/apache/yetus-base:main
+          --docker-cache-from=ghcr.io/effectivemachines/buretoolbox:main
           --github-token="${{ secrets.GITHUB_TOKEN }}"
           --html-report-file="${GITHUB_WORKSPACE}/out/report.html"
           --junit-report-xml="${GITHUB_WORKSPACE}/out/junit-report.xml"
