@@ -14,21 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if [[ -n "${DOCKER_MULTIARCH}" ]]; then
-  BUILDER_NAME="yetus-multiarch-$(date +%s)"
-  docker buildx create --name "${BUILDER_NAME}" --driver docker-container --use \
-    || docker buildx use yetus-multiarch \
-    || exit 1
-  docker buildx inspect --bootstrap || exit 1
-
-  traphandler() {
-    docker buildx rm "${BUILDER_NAME}" || true
-  }
-
-  trap traphandler HUP INT QUIT TERM
-
-fi
-
 iso8601date() {
   date -u +"%Y-%m-%dT%H:%M:%SZ"
 }
@@ -103,30 +88,38 @@ if [[ -z "${DOCKER_TAG}" ]]; then
 fi
 
 if [[ -z "${DOCKER_REPO}" ]]; then
-  DOCKER_REPO=apache/yetus
+  DOCKER_REPO=$(echo "${GIT_URL}" | sed 's|.*github\.com[:/]||;s|\.git$||')
   export DOCKER_REPO
 fi
 
 BUILDERINSTANCE=$(docker buildx inspect --bootstrap | grep Driver)
-PLATARRAY=()
 
-if [[ "${BUILDERINSTANCE}" =~ docker-container ]]; then
-  PLATFORMS=()
-  KNOWN_PLATFORMS=$(docker buildx inspect --bootstrap | grep Platforms)
+# 1. Platform Setup
+if [[ -n "${FORCE_PLATFORM}" ]]; then
+  PLATARRAY=(--platform "${FORCE_PLATFORM}")
+  echo "GitHub Actions Mode: Forcing platform to ${FORCE_PLATFORM}"
+else
+  # Only do the heavy 'buildx create' and discovery if we aren't forcing a platform
+  if [[ -n "${DOCKER_MULTIARCH}" ]]; then
+    BUILDER_NAME="yetus-multiarch-$(date +%s)"
+    docker buildx create --name "${BUILDER_NAME}" --driver docker-container --use \
+      || docker buildx use yetus-multiarch \
+      || exit 1
 
-  if [[ ${KNOWN_PLATFORMS} =~ linux/amd64 ]]; then
-    PLATFORMS+=(linux/amd64)
+    # Discovery logic
+    BUILDERINSTANCE=$(docker buildx inspect --bootstrap | grep Driver)
+    if [[ "${BUILDERINSTANCE}" =~ docker-container ]]; then
+      PLATFORMS=()
+      KNOWN_PLATFORMS=$(docker buildx inspect --bootstrap | grep Platforms)
+      [[ ${KNOWN_PLATFORMS} =~ linux/amd64 ]] && PLATFORMS+=(linux/amd64)
+      [[ ${KNOWN_PLATFORMS} =~ linux/arm64 ]] && PLATFORMS+=(linux/arm64)
+
+      PLATSTRING=${PLATFORMS[*]}
+      PLATSTRING=${PLATSTRING/ /,}
+      PLATARRAY=(--platform "${PLATSTRING}")
+      echo "Docker Hub/Legacy Mode: Building for ${PLATSTRING}"
+    fi
   fi
-
-  if [[ ${KNOWN_PLATFORMS} =~ linux/arm64 ]]; then
-    PLATFORMS+=(linux/arm64)
-  fi
-
-  PLATSTRING=${PLATFORMS[*]}
-  PLATSTRING=${PLATSTRING/ /,}
-  echo "Building for ${PLATSTRING}"
-
-  PLATARRAY=(--platform "${PLATSTRING}")
 fi
 
 echo
