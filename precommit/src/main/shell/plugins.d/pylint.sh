@@ -24,7 +24,7 @@ PYLINT=${PYLINT:-$(command -v pylint 2>/dev/null)}
 # backward compatibility, do not use
 PYLINT_PIP_CMD=$(command -v pip 2>/dev/null)
 PYLINT_REQUIREMENTS=false
-PYLINT_PIP_USER=true
+PYLINT_PIP_USER=false
 PYLINT_IGNORE_BAD_OPTION_VALUE=true
 
 function pylint_usage
