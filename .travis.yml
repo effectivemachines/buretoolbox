@@ -30,6 +30,7 @@ script:
     precommit/src/main/shell/test-patch.sh
     --docker
     --patch-dir=/tmp/yetus-out
+    --java-home=/usr/lib/jvm/default-java
     --plugins=all,-detsecrets
     --docker-cache-from=ghcr.io/effectivemachines/buretoolbox:main
     --html-report-file=/tmp/yetus-out/report.html

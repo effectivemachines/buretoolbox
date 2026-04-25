@@ -94,6 +94,7 @@ pipeline {
                 YETUS_ARGS+=("--csv-report-file=${WORKSPACE}/${YETUS_RELATIVE_PATCHDIR}/yetus-out/report.csv")
                 # enable writing back to Github
                 YETUS_ARGS+=(--github-token="${GITHUB_TOKEN}")
+                YETUS_ARGS+=(--java-home=/usr/lib/jvm/default-java)
 
 
                 # enable writing back to ASF JIRA
