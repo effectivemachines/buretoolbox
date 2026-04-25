@@ -51,6 +51,7 @@ jobs:
           --docker-cache-from=ghcr.io/effectivemachines/buretoolbox:main
           --github-token="${{ secrets.GITHUB_TOKEN }}"
           --html-report-file="${GITHUB_WORKSPACE}/out/report.html"
+          --java-home=/usr/lib/jvm/default-java
           --junit-report-xml="${GITHUB_WORKSPACE}/out/junit-report.xml"
           --patch-dir="${GITHUB_WORKSPACE}/out"
           --plugins=all

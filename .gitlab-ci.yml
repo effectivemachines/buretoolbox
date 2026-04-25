@@ -18,13 +18,12 @@
 buretoolbox-job:
   image: ghcr.io/effectivemachines/buretoolbox:main
   allow_failure: true
-  variables:
-    JAVA_HOME: /usr/lib/jvm/default-java
   script:
     - >
       precommit/src/main/shell/test-patch.sh
       --patch-dir=/tmp/yetus-out
       --plugins=all
+      --java-home=/usr/lib/jvm/default-java
       --html-report-file=/tmp/yetus-out/report.html
       --csv-report-file=/tmp/yetus-out/report.csv
       --console-report-file=/tmp/yetus-out/console.txt
