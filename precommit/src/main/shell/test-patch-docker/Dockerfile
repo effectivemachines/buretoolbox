@@ -52,7 +52,9 @@ RUN apt-get -q update && apt-get -q install --no-install-recommends -y \
         gpg-agent \
         libffi-dev \
         libicu-dev \
+        libxml2-dev \
         libxml2-utils \
+        libxslt1-dev \
         locales \
         patch \
         pkg-config \
